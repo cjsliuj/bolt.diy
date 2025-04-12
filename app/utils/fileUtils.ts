@@ -16,12 +16,25 @@ export const IGNORE_PATTERNS = [
   '**/npm-debug.log*',
   '**/yarn-debug.log*',
   '**/yarn-error.log*',
+  '**/*.DS_Store'
 ];
 
 export const MAX_FILES = 1000;
 export const ig = ignore().add(IGNORE_PATTERNS);
 
 export const generateId = () => Math.random().toString(36).substring(2, 15);
+
+export const isBinaryFile2 = async (fileBuffer: Uint8Array): Promise<boolean> => {
+  const chunkSize = 1024;
+  for (let i = 0; i < chunkSize; i++) {
+    const byte = fileBuffer[i];
+    if (byte === 0 || (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 export const isBinaryFile = async (file: File): Promise<boolean> => {
   const chunkSize = 1024;

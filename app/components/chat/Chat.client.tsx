@@ -2,9 +2,10 @@
  * @ts-nocheck
  * Preventing TS checks with files presented in the video for a better presentation.
  */
-import { useStore } from '@nanostores/react';
+import { useStore  } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from 'ai/react';
+import MoonLoader from "react-spinners/MoonLoader";
 // import { json } from "@remix-run/node";
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -26,10 +27,11 @@ import { createSampler } from '~/utils/sampler';
 import { getTemplates, selectStarterTemplate } from '~/utils/selectStarterTemplate';
 import { logStore } from '~/lib/stores/logs';
 import { streamingState } from '~/lib/stores/streaming';
-import { filesToArtifacts } from '~/utils/fileUtils';
+import { filesToArtifacts, isBinaryFile, isBinaryFile2, shouldIncludeFile } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
 import { json, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { createChatFromFileArtifacts, createChatFromFolder } from '~/utils/folderImport';
+import JSZip from 'jszip';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -38,32 +40,78 @@ const toastAnimation = cssTransition({
 
 const logger = createScopedLogger('Chat');
 interface AutoImportChatProps {
-  assetid: string|null;
+  asseturl: string|null;
 }
-export function AutoImportChat({ assetid }: AutoImportChatProps) {
-  renderLogger.trace('Chat');
-  console.log("ljlog assetid2:",assetid);
+export function AutoImportChat({ asseturl }: AutoImportChatProps) {
+  const containerStyle = {
+    width: '100%',
+    height: '100%',
+  };
+  const centeredStyle = {
+    top: '45%',
+    left: '45%',
+  }
+  let [loading, setLoading] = useState(false);
   const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
 
-  const xxx = async ()=>{
-    const fileArtifacts: {content:string, path:string}[] = [
-      {
-        content:"11111",
-        path:"1.txt"
-      },
-      {
-        content:"22222",
-        path:"2.txt"
-      },
-    ]
-    console.log("ready:", ready)
-    const messages = await createChatFromFileArtifacts(fileArtifacts, [], "folderName");
+  const importAsset = async ()=>{
+
+    if (!asseturl || asseturl.length == 0) {
+      return <div>无法导入文件，无效链接</div>;
+    }
+
+    setLoading(true);
+    console.log("ljlog asseturl:",asseturl);
+
+
+    const response = await fetch(asseturl);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const zip = new JSZip();
+    const blob = new Blob([await response.blob()]);
+    const zipContent = await blob.arrayBuffer();
+    const extractedFiles = await zip.loadAsync(zipContent);
+
+    var fileArtifacts: {content:string, path:string}[] = []
+    var binaryFiles: string[] = []
+    for (const fileName in extractedFiles.files) {
+      const fileObj = extractedFiles.files[fileName];
+      if (fileObj.dir) {
+        continue;
+      }
+      if (!shouldIncludeFile(fileName)) {
+        continue;
+      }
+
+      const fileBuffer = await fileObj.async("uint8array")
+      if (await isBinaryFile2(fileBuffer)) {
+        binaryFiles.push(fileName);
+        continue;
+      }
+      const decoder = new TextDecoder('utf-8');
+      const fileContent = decoder.decode(fileBuffer);
+      fileArtifacts.push({
+        "content":fileContent,
+        "path":fileName
+      });
+
+    }
+    const messages = await createChatFromFileArtifacts(fileArtifacts, binaryFiles, "folderName");
     await importChat("", [...messages]);
+    setLoading(false);
   }
 
+  useEffect(() => {
+    importAsset()
+  }, []); // 依赖数组为空，确保只执行一次
 
   return (
-    <button onClick={xxx}>aaaaaaaa</button>
+    <div style={containerStyle}>
+      {/*<button onClick={importAsset}>aaaaaaaa</button>*/}
+      <MoonLoader color="#0085ff" cssOverride={centeredStyle} loading={loading}/>
+    </div>
   );
 }
 export function Chat() {

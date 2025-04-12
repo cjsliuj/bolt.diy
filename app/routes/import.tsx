@@ -8,15 +8,12 @@ import { useLoaderData, useNavigate } from '@remix-run/react';
 
 export const loader = async ({ request: _request }: LoaderFunctionArgs) => {
   const url = new URL(_request.url);
-  const importAssetid = url.searchParams.get("assetid")
-  return json({importAssetid:importAssetid})
+  const asseturl = url.searchParams.get("asset")
+  return json({asseturl:asseturl})
 };
 export default function Index() {
-  const { importAssetid } = useLoaderData<typeof loader>();
+  const { asseturl } = useLoaderData<typeof loader>();
   return (
-    <div className="flex flex-col h-full w-full bg-bolt-elements-background-depth-1">
-       asset import
-      <ClientOnly fallback={<BaseChat />}>{() => <AutoImportChat assetid={importAssetid}></AutoImportChat>}</ClientOnly>
-    </div>
+    <ClientOnly fallback={<BaseChat />}>{() => <AutoImportChat asseturl={asseturl}></AutoImportChat>}</ClientOnly>
   );
 }
