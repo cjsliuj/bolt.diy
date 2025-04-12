@@ -5,6 +5,7 @@
 import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from 'ai/react';
+// import { json } from "@remix-run/node";
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { cssTransition, toast, ToastContainer } from 'react-toastify';
@@ -20,13 +21,15 @@ import Cookies from 'js-cookie';
 import { debounce } from '~/utils/debounce';
 import { useSettings } from '~/lib/hooks/useSettings';
 import type { ProviderInfo } from '~/types/model';
-import { useSearchParams } from '@remix-run/react';
+import { useLoaderData, useNavigate, useSearchParams } from '@remix-run/react';
 import { createSampler } from '~/utils/sampler';
 import { getTemplates, selectStarterTemplate } from '~/utils/selectStarterTemplate';
 import { logStore } from '~/lib/stores/logs';
 import { streamingState } from '~/lib/stores/streaming';
 import { filesToArtifacts } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
+import { json, type LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { createChatFromFileArtifacts, createChatFromFolder } from '~/utils/folderImport';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -34,7 +37,35 @@ const toastAnimation = cssTransition({
 });
 
 const logger = createScopedLogger('Chat');
+interface AutoImportChatProps {
+  assetid: string|null;
+}
+export function AutoImportChat({ assetid }: AutoImportChatProps) {
+  renderLogger.trace('Chat');
+  console.log("ljlog assetid2:",assetid);
+  const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
 
+  const xxx = async ()=>{
+    const fileArtifacts: {content:string, path:string}[] = [
+      {
+        content:"11111",
+        path:"1.txt"
+      },
+      {
+        content:"22222",
+        path:"2.txt"
+      },
+    ]
+    console.log("ready:", ready)
+    const messages = await createChatFromFileArtifacts(fileArtifacts, [], "folderName");
+    await importChat("", [...messages]);
+  }
+
+
+  return (
+    <button onClick={xxx}>aaaaaaaa</button>
+  );
+}
 export function Chat() {
   renderLogger.trace('Chat');
 
