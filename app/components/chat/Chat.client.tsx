@@ -47,60 +47,67 @@ export function AutoImportChat({ asseturl }: AutoImportChatProps) {
     width: '100%',
     height: '100%',
   };
-  const centeredStyle = {
+  const centeredStyleForLoading = {
     top: '45%',
     left: '45%',
   }
+
   let [loading, setLoading] = useState(false);
+  let [tip, setTip] = useState("");
   const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
 
   const importAsset = async ()=>{
-
-    if (!asseturl || asseturl.length == 0) {
-      return <div>无法导入文件，无效链接</div>;
-    }
-
     setLoading(true);
     console.log("ljlog asseturl:",asseturl);
-
-
-    const response = await fetch(asseturl);
+    if (!asseturl || asseturl.length <= 0) {
+      setTip("asset 不存在");
+      setLoading(false);
+      return;
+    }
+    const response = await fetch(asseturl!);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      setTip("asset拉去失败：HTTP error! status:" + response.status);
+      setLoading(false);
+      return;
     }
+    try {
+      const zip = new JSZip();
+      const blob = new Blob([await response.blob()]);
+      const zipContent = await blob.arrayBuffer();
+      const extractedFiles = await zip.loadAsync(zipContent);
 
-    const zip = new JSZip();
-    const blob = new Blob([await response.blob()]);
-    const zipContent = await blob.arrayBuffer();
-    const extractedFiles = await zip.loadAsync(zipContent);
+      var fileArtifacts: {content:string, path:string}[] = []
+      var binaryFiles: string[] = []
+      for (const fileName in extractedFiles.files) {
+        const fileObj = extractedFiles.files[fileName];
+        if (fileObj.dir) {
+          continue;
+        }
+        if (!shouldIncludeFile(fileName)) {
+          continue;
+        }
 
-    var fileArtifacts: {content:string, path:string}[] = []
-    var binaryFiles: string[] = []
-    for (const fileName in extractedFiles.files) {
-      const fileObj = extractedFiles.files[fileName];
-      if (fileObj.dir) {
-        continue;
+        const fileBuffer = await fileObj.async("uint8array")
+        if (await isBinaryFile2(fileBuffer)) {
+          binaryFiles.push(fileName);
+          continue;
+        }
+        const decoder = new TextDecoder('utf-8');
+        const fileContent = decoder.decode(fileBuffer);
+        fileArtifacts.push({
+          "content":fileContent,
+          "path":fileName
+        });
+
       }
-      if (!shouldIncludeFile(fileName)) {
-        continue;
-      }
-
-      const fileBuffer = await fileObj.async("uint8array")
-      if (await isBinaryFile2(fileBuffer)) {
-        binaryFiles.push(fileName);
-        continue;
-      }
-      const decoder = new TextDecoder('utf-8');
-      const fileContent = decoder.decode(fileBuffer);
-      fileArtifacts.push({
-        "content":fileContent,
-        "path":fileName
-      });
-
+      const messages = await createChatFromFileArtifacts(fileArtifacts, binaryFiles, "folderName");
+      await importChat("", [...messages]);
+      setLoading(false);
     }
-    const messages = await createChatFromFileArtifacts(fileArtifacts, binaryFiles, "folderName");
-    await importChat("", [...messages]);
-    setLoading(false);
+    catch(e) {
+      setTip("exception:" + e);
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -110,7 +117,8 @@ export function AutoImportChat({ asseturl }: AutoImportChatProps) {
   return (
     <div style={containerStyle}>
       {/*<button onClick={importAsset}>aaaaaaaa</button>*/}
-      <MoonLoader color="#0085ff" cssOverride={centeredStyle} loading={loading}/>
+      <MoonLoader color="#0085ff" cssOverride={centeredStyleForLoading} loading={loading}/>
+      <div>{tip}</div>
     </div>
   );
 }
