@@ -16,7 +16,8 @@ export const IGNORE_PATTERNS = [
   '**/npm-debug.log*',
   '**/yarn-debug.log*',
   '**/yarn-error.log*',
-  '**/*.DS_Store'
+  '**/*.DS_Store',
+  '**/.gitignore'
 ];
 
 export const MAX_FILES = 1000;
