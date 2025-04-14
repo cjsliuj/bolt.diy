@@ -24,7 +24,7 @@ import { EditorPanel } from './EditorPanel';
 import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
 import { PushToGitHubDialog } from '~/components/@settings/tabs/connections/components/PushToGitHubDialog';
-
+import qiniu from 'qiniu'
 interface WorkspaceProps {
   chatStarted?: boolean;
   isStreaming?: boolean;
@@ -298,6 +298,78 @@ export const Workbench = memo(
     const setSelectedView = (view: WorkbenchViewType) => {
       workbenchStore.currentView.set(view);
     };
+    useEffect(() => {
+
+      // 定义消息处理函数
+      const handleMessage = (event:any) => {
+        // console.log('Received message from iframe:', event.data);
+        const data = event.data as {
+          msgType:string,
+          imgID: string
+        }
+        const msgType = data["msgType"]
+        if (msgType == undefined) {
+          return
+        }
+        // console.log("do upload")
+        // const uploadFile = async (buffer:Uint8Array, storeName:string):Promise<string> => {
+        //   const accessKey = "VDP1TMdmEwEwANypomnZP-eVyNCCuKWU2zK4pGle";
+        //   const secretKey = "AAy-c2MFPYN3tANm7O03Mx48r37UXXSmbbQ9Yz-E";
+        //   const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
+        //   const options = {
+        //     scope: "aiyard",
+        //     returnBody:
+        //       '{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)"}',
+        //     expires: 3600 * 24 * 10
+        //   }
+        //   const putPolicy = new qiniu.rs.PutPolicy(options);
+        //   const uploadtoken = putPolicy.uploadToken(mac);
+        //   console.log(uploadtoken)
+        //   const config = new qiniu.conf.Config();
+        //   config.useHttpsDomain = true
+        //   const bucketManager = new qiniu.rs.BucketManager(mac, config);
+        //   const privateBucketDomain = "http://sup0juump.hd-bkt.clouddn.com";
+        //   const formUploader = new qiniu.form_up.FormUploader(config);
+        //   const putExtra = new qiniu.form_up.PutExtra();
+        //   const { data, resp } = await formUploader.put(uploadtoken, storeName, buffer, putExtra)
+        //   if (resp.statusCode === 200) {
+        //     console.log(data);
+        //     const deadline = Math.floor(Date.now() / 1000 + 3600 * 24 * 365 * 10); // 1小时过期
+        //     const privateDownloadUrl = bucketManager.privateDownloadUrl(
+        //       privateBucketDomain,
+        //       storeName,
+        //       deadline
+        //     );
+        //     console.log(privateDownloadUrl)
+        //     return privateDownloadUrl
+        //   } else {
+        //     console.log(resp.statusCode);
+        //     console.log(data);
+        //     return ""
+        //   }
+        // }
+        //
+        // uploadFile(new TextEncoder().encode("xxxxxxxxx"), "t3.txt").then((data) => {
+        //   console.log(data);
+        // })
+        
+        // 在这里处理接收到的消息
+        // var curContent = workbenchStore.currentDocument.get()!.value!
+        // curContent = curContent.replace("test.svg","https://img2.baidu.com/it/u=2288767807,3468141490&fm=253&fmt=auto&app=138&f=JPEG?w=579&h=500")
+        // console.log(curContent)
+        // workbenchStore.setCurrentDocumentContent(curContent)
+        // workbenchStore.saveCurrentDocument()
+      };
+
+      // 添加事件监听器
+      window.addEventListener('message', handleMessage);
+
+      // 在组件卸载时移除事件监听器
+      return () => {
+        window.removeEventListener('message', handleMessage);
+      };
+    }, []);
+
 
     useEffect(() => {
       if (hasPreview) {
