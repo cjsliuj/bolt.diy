@@ -157,7 +157,11 @@ export class WorkbenchStore {
   setShowWorkbench(show: boolean) {
     this.showWorkbench.set(show);
   }
-
+  getDocumentByFile(filePath:string): EditorDocument {
+    const documents = this.#editorStore.documents.get();
+    const document = documents[filePath];
+    return document;
+  }
   setCurrentDocumentContent(newContent: string) {
     const filePath = this.currentDocument.get()?.filePath;
 
