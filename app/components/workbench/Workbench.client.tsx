@@ -25,6 +25,14 @@ import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
 import { PushToGitHubDialog } from '~/components/@settings/tabs/connections/components/PushToGitHubDialog';
 import * as qiniu from 'qiniu-js';
+import {
+  S3Client,
+  ListBucketsCommand,
+  ListObjectsV2Command,
+  GetObjectCommand,
+  PutObjectCommand, GetObjectAttributesCommand
+} from '@aws-sdk/client-s3';
+
 interface WorkspaceProps {
   chatStarted?: boolean;
   isStreaming?: boolean;
@@ -361,7 +369,17 @@ export const Workbench = memo(
       workbenchStore.setSelectedFile(filePath);
       workbenchStore.currentView.set('diff');
     }, []);
-
+    const fileToUint8Array = (file:File):Promise<Uint8Array> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const arrayBuffer = e.target!.result as ArrayBuffer;
+          resolve(new Uint8Array(arrayBuffer));
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
     const handleIFrameMessage = (event:any) => {
       // console.log('Received message from iframe:', event.data);
       const data = event.data as IFrameReplaceMessageData
@@ -375,32 +393,59 @@ export const Workbench = memo(
     };
     const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
       const file = e.target.files?.[0];
-      console.log(file)
+      // const observer = {
+      //   next(res:{}){
+      //     console.log("res", res);
+      //   },
+      //   error(err:{}){
+      //     console.log("err:",err);
+      //   },
+      //   complete(res:{"key":string}){
+      //     console.log("complete:", res["key"])
+      //     const url = "http://sup0juump.hd-bkt.clouddn.com/" + res["key"]
+      //     if(iframeReplaceMessageData!.elementType == "img") {
+      //       var curContent = workbenchStore.currentDocument.get()!.value!
+      //       curContent = curContent.replace("test.svg",url)
+      //       console.log(curContent)
+      //       workbenchStore.setCurrentDocumentContent(curContent)
+      //       workbenchStore.saveCurrentDocument()
+      //     }
+      //
+      //   }
+      // }
+      // const token = "VDP1TMdmEwEwANypomnZP-eVyNCCuKWU2zK4pGle:TlxOBZrlDdjeVIWaz-6kWgSBqRE=:eyJzY29wZSI6ImFpeWFyZCIsInJldHVybkJvZHkiOiJ7XCJrZXlcIjpcIiQoa2V5KVwiLFwiaGFzaFwiOlwiJChldGFnKVwiLFwiZnNpemVcIjokKGZzaXplKSxcImJ1Y2tldFwiOlwiJChidWNrZXQpXCIsXCJuYW1lXCI6XCIkKHg6bmFtZSlcIn0iLCJkZWFkbGluZSI6MTc0NTQ5NTY1M30="
+      // const observable = qiniu.upload(file!, null, token, {}, { });
+      // const subscription = observable.subscribe(observer)
 
-      const observer = {
-        next(res:{}){
-          console.log("res", res);
+      const fileBuffer = await fileToUint8Array(file!);
+      const fname = Date.now().toString();
+      const input = { // ListBucketsRequest
+        Bucket:"mytest",
+        Key:fname,
+        Body:fileBuffer,
+        ContentType:"image/png",
+      };
+      const S3 = new S3Client({
+        region: "auto",
+        endpoint: import.meta.env.VITE_CLOUDFLARE_ENDPOINT,
+        credentials: {
+          accessKeyId: import.meta.env.VITE_CLOUDFLARE_ACCESSKEY_ID,
+          secretAccessKey: import.meta.env.VITE_CLOUDFLARE_SECRET_ACCESSKEY,
         },
-        error(err:{}){
-          console.log("err:",err);
-        },
-        complete(res:{"key":string}){
-          console.log("complete:", res["key"])
-          const url = "http://sup0juump.hd-bkt.clouddn.com/" + res["key"]
-          if(iframeReplaceMessageData!.elementType == "img") {
-            var curContent = workbenchStore.currentDocument.get()!.value!
-            curContent = curContent.replace("test.svg",url)
-            console.log(curContent)
-            workbenchStore.setCurrentDocumentContent(curContent)
-            workbenchStore.saveCurrentDocument()
-          }
-
-        }
+      });
+      const command = new PutObjectCommand(input);
+      const response = await S3.send(command);
+      console.log(iframeReplaceMessageData)
+      if(iframeReplaceMessageData!.elementType == "img") {
+        var curContent = workbenchStore.currentDocument.get()!.value!
+        const url = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
+        curContent = curContent.replace("test.svg",url)
+        console.log(11111)
+        console.log(url)
+        console.log(curContent)
+        workbenchStore.setCurrentDocumentContent(curContent)
+        workbenchStore.saveCurrentDocument()
       }
-      const token = "VDP1TMdmEwEwANypomnZP-eVyNCCuKWU2zK4pGle:TlxOBZrlDdjeVIWaz-6kWgSBqRE=:eyJzY29wZSI6ImFpeWFyZCIsInJldHVybkJvZHkiOiJ7XCJrZXlcIjpcIiQoa2V5KVwiLFwiaGFzaFwiOlwiJChldGFnKVwiLFwiZnNpemVcIjokKGZzaXplKSxcImJ1Y2tldFwiOlwiJChidWNrZXQpXCIsXCJuYW1lXCI6XCIkKHg6bmFtZSlcIn0iLCJkZWFkbGluZSI6MTc0NTQ5NTY1M30="
-      const observable = qiniu.upload(file!, null, token, {}, { });
-      const subscription = observable.subscribe(observer)
-
       var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
       fileInput!.value = ""
     }
