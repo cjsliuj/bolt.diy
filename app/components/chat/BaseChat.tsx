@@ -15,6 +15,7 @@ import { SendButton } from './SendButton.client';
 import { APIKeyManager, getApiKeysFromCookies } from './APIKeyManager';
 import Cookies from 'js-cookie';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { useTranslation } from 'react-i18next';
 
 import styles from './BaseChat.module.scss';
 import { ExportChatButton } from '~/components/chat/chatExportAndImport/ExportChatButton';
@@ -116,6 +117,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>(getApiKeysFromCookies());
     const [modelList, setModelList] = useState<ModelInfo[]>([]);
@@ -324,10 +326,10 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             {!chatStarted && (
               <div id="intro" className="mt-[16vh] max-w-chat mx-auto text-center px-4 lg:px-0">
                 <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
-                  Where ideas begin
+                  {t('chat.whereIdeasBegin')}
                 </h1>
                 <p className="text-md lg:text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  Bring ideas to life in seconds or get help on existing projects.
+                  {t('chat.bringIdeasToLife')}
                 </p>
               </div>
             )}
@@ -534,7 +536,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         minHeight: TEXTAREA_MIN_HEIGHT,
                         maxHeight: TEXTAREA_MAX_HEIGHT,
                       }}
-                      placeholder="How can Bolt help you today?"
+                      placeholder={t('chat.howCanBoltHelp')}
                       translate="no"
                     />
                     <ClientOnly>
@@ -558,7 +560,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     </ClientOnly>
                     <div className="flex justify-between items-center text-sm p-4 pt-2">
                       <div className="flex gap-1 items-center">
-                        <IconButton title="Upload file" className="transition-all" onClick={() => handleFileUpload()}>
+                        <IconButton title={t('chat.uploadFile')} className="transition-all" onClick={() => handleFileUpload()}>
                           <div className="i-ph:paperclip text-xl"></div>
                         </IconButton>
                         <IconButton

@@ -14,10 +14,12 @@ import { chatId } from '~/lib/persistence/useChatHistory';
 import { streamingState } from '~/lib/stores/streaming';
 import { NetlifyDeploymentLink } from '~/components/chat/NetlifyDeploymentLink.client';
 import { VercelDeploymentLink } from '~/components/chat/VercelDeploymentLink.client';
+import { useTranslation } from 'react-i18next';
 
 interface HeaderActionButtonsProps {}
 
 export function HeaderActionButtons({}: HeaderActionButtonsProps) {
+  const { t } = useTranslation('common');
   const showWorkbench = useStore(workbenchStore.showWorkbench);
   const { showChat } = useStore(chatStore);
   const netlifyConn = useStore(netlifyConnection);
@@ -336,7 +338,8 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="px-4 hover:bg-bolt-elements-item-backgroundActive flex items-center gap-2"
           >
-            {isDeploying ? `Deploying to ${deployingTo}...` : 'Deploy'}
+            <div className="i-ph:cloud-arrow-up" />
+            {isDeploying ? t('deploy.deploying') : t('deploy.title')}
             <div
               className={classNames('i-ph:caret-down w-4 h-4 transition-transform', isDropdownOpen ? 'rotate-180' : '')}
             />
@@ -400,7 +403,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
                 src="https://cdn.simpleicons.org/cloudflare"
                 alt="cloudflare"
               />
-              <span className="mx-auto">Deploy to Cloudflare (Coming Soon)</span>
+              <span className="mx-auto">{t('common.comingSoon')}</span>
             </Button>
           </div>
         )}

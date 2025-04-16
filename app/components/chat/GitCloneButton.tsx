@@ -5,11 +5,13 @@ import { detectProjectCommands, createCommandsMessage, escapeBoltTags } from '~/
 import { generateId } from '~/utils/fileUtils';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
+import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { RepositorySelectionDialog } from '~/components/@settings/tabs/connections/components/RepositorySelectionDialog';
 import { classNames } from '~/utils/classNames';
 import { Button } from '~/components/ui/Button';
 import type { IChatMetadata } from '~/lib/persistence/db';
+import { useTranslation } from 'react-i18next';
+import { Loader2 } from 'lucide-react';
 
 const IGNORE_PATTERNS = [
   'node_modules/**',
@@ -42,9 +44,11 @@ interface GitCloneButtonProps {
 }
 
 export default function GitCloneButton({ importChat, className }: GitCloneButtonProps) {
+  const { t } = useTranslation('common');
   const { ready, gitClone } = useGit();
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleClone = async (repoUrl: string) => {
     if (!ready) {
@@ -52,6 +56,7 @@ export default function GitCloneButton({ importChat, className }: GitCloneButton
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const { workdir, data } = await gitClone(repoUrl);
@@ -143,9 +148,9 @@ ${escapeBoltTags(file.content)}
 
         await importChat(`Git Project:${repoUrl.split('/').slice(-1)[0]}`, messages);
       }
-    } catch (error) {
-      console.error('Error during import:', error);
-      toast.error('Failed to import repository');
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(`Error cloning repository: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -155,7 +160,7 @@ ${escapeBoltTags(file.content)}
     <>
       <Button
         onClick={() => setIsDialogOpen(true)}
-        title="Clone a Git Repo"
+        title={t('git.cloneRepoTitle')}
         variant="outline"
         size="lg"
         className={classNames(
@@ -169,13 +174,20 @@ ${escapeBoltTags(file.content)}
         )}
         disabled={!ready || loading}
       >
-        <span className="i-ph:git-branch w-4 h-4" />
-        Clone a Git Repo
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {t('common.loading')}
+          </>
+        ) : (
+          t('git.cloneRepoButton')
+        )}
       </Button>
 
       <RepositorySelectionDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} onSelect={handleClone} />
 
-      {loading && <LoadingOverlay message="Please wait while we clone the repository..." />}
+      {loading && <LoadingOverlay message={t('workbench.cloningRepoMessage')} />}
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </>
   );
 }

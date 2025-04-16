@@ -23,6 +23,7 @@ import type { IProviderSetting, ProviderInfo, IProviderConfig } from '~/types/mo
 import type { TabWindowConfig, TabVisibilityConfig } from '~/components/@settings/core/types';
 import { logStore } from '~/lib/stores/logs';
 import { getLocalStorage, setLocalStorage } from '~/lib/persistence';
+import i18n from '~/i18n';
 
 export interface Settings {
   theme: 'light' | 'dark' | 'system';
@@ -83,9 +84,13 @@ export function useSettings(): UseSettingsReturn {
   const tabConfiguration = useStore(tabConfigurationStore);
   const [settings, setSettings] = useState<Settings>(() => {
     const storedSettings = getLocalStorage('settings');
+    const detectedLanguage = typeof window !== 'undefined' ? localStorage.getItem('bolt_language') : null;
+    console.log(`[useSettings] Initializing: storedSettings=${JSON.stringify(storedSettings)}, detectedLanguage=${detectedLanguage}`);
+    const initialLanguage = detectedLanguage || storedSettings?.language || 'en';
+    console.log(`[useSettings] Initial language set to: ${initialLanguage}`);
     return {
       theme: storedSettings?.theme || 'system',
-      language: storedSettings?.language || 'en',
+      language: initialLanguage,
       notifications: storedSettings?.notifications ?? true,
       eventLogs: storedSettings?.eventLogs ?? true,
       timezone: storedSettings?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -104,8 +109,12 @@ export function useSettings(): UseSettingsReturn {
   const saveSettings = useCallback((newSettings: Partial<Settings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
-      setLocalStorage('settings', updated);
-
+      console.log(`[useSettings] Saving settings: ${JSON.stringify(updated)}`);
+      setLocalStorage('settings', updated); 
+      if (newSettings.language && typeof window !== 'undefined') {
+        console.log(`[useSettings] Setting localStorage bolt_language to: ${newSettings.language}`);
+        localStorage.setItem('bolt_language', newSettings.language);
+      }
       return updated;
     });
   }, []);
@@ -154,7 +163,15 @@ export function useSettings(): UseSettingsReturn {
 
   const setLanguage = useCallback(
     (language: string) => {
+      console.log(`[useSettings] setLanguage called with: ${language}`);
+      console.log(`[useSettings] Current i18n language before change: ${i18n.language}`);
       saveSettings({ language });
+      i18n.changeLanguage(language).then(() => {
+        console.log(`[useSettings] i18n.changeLanguage('${language}') promise resolved.`);
+        console.log(`[useSettings] Current i18n language after change: ${i18n.language}`);
+      }).catch(err => {
+        console.error(`[useSettings] i18n.changeLanguage failed for ${language}:`, err);
+      });
     },
     [saveSettings],
   );
@@ -175,12 +192,34 @@ export function useSettings(): UseSettingsReturn {
 
   useEffect(() => {
     const providers = providersStore.get();
-    const providerSetting: Record<string, IProviderSetting> = {}; // preserve the entire settings object for each provider
+    const providerSetting: Record<string, IProviderSetting> = {};
     Object.keys(providers).forEach((provider) => {
       providerSetting[provider] = providers[provider].settings;
     });
     Cookies.set('providers', JSON.stringify(providerSetting));
   }, [providers]);
+
+  useEffect(() => {
+    const currentLanguage = settings.language || 'en';
+    console.log(`[useSettings] useEffect language sync check: settings.language=${currentLanguage}, i18n.language=${i18n.language}`);
+    if (i18n.language !== currentLanguage) {
+      console.log(`[useSettings] useEffect: Mismatch detected, calling i18n.changeLanguage(${currentLanguage})`);
+      i18n.changeLanguage(currentLanguage).then(() => {
+         console.log(`[useSettings] useEffect: i18n.changeLanguage(${currentLanguage}) promise resolved.`);
+         if (typeof window !== 'undefined') {
+           const lsLang = localStorage.getItem('bolt_language');
+           console.log(`[useSettings] useEffect: Current localStorage bolt_language: ${lsLang}`);
+           if (lsLang !== currentLanguage) {
+              console.log(`[useSettings] useEffect: Updating localStorage bolt_language to ${currentLanguage}`);
+              localStorage.setItem('bolt_language', currentLanguage);
+           }
+         }
+      }).catch(err => {
+         console.error(`[useSettings] useEffect: i18n.changeLanguage(${currentLanguage}) failed:`, err);
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.language]);
 
   return {
     ...settings,

@@ -6,6 +6,7 @@ import { createChatFromFolder } from '~/utils/folderImport';
 import { logStore } from '~/lib/stores/logs'; // Assuming logStore is imported from this location
 import { Button } from '~/components/ui/Button';
 import { classNames } from '~/utils/classNames';
+import { useTranslation } from 'react-i18next';
 
 interface ImportFolderButtonProps {
   className?: string;
@@ -13,6 +14,7 @@ interface ImportFolderButtonProps {
 }
 
 export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ className, importChat }) => {
+  const { t } = useTranslation('common');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,7 +121,7 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
           const input = document.getElementById('folder-import');
           input?.click();
         }}
-        title="Import Folder"
+        title={t('chat.importFolder')}
         variant="outline"
         size="lg"
         className={classNames(
@@ -134,7 +136,7 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
         disabled={isLoading}
       >
         <span className="i-ph:upload-simple w-4 h-4" />
-        {isLoading ? 'Importing...' : 'Import Folder'}
+        {isLoading ? t('chat.importing') : t('chat.importFolder')}
       </Button>
     </>
   );

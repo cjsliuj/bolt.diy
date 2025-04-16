@@ -32,6 +32,7 @@ import { supabaseConnection } from '~/lib/stores/supabase';
 import { json, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { createChatFromFileArtifacts, createChatFromFolder } from '~/utils/folderImport';
 import JSZip from 'jszip';
+import { useTranslation } from 'react-i18next';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -43,6 +44,7 @@ interface AutoImportChatProps {
   asseturl: string|null;
 }
 export function AutoImportChat({ asseturl }: AutoImportChatProps) {
+  const { t } = useTranslation();
   const containerStyle = {
     width: '100%',
     height: '100%',
@@ -60,13 +62,13 @@ export function AutoImportChat({ asseturl }: AutoImportChatProps) {
     setLoading(true);
     console.log("ljlog asseturl:",asseturl);
     if (!asseturl || asseturl.length <= 0) {
-      setTip("asset 不存在");
+      setTip(t('common.error') + ": asset " + t('common.error'));
       setLoading(false);
       return;
     }
     const response = await fetch(asseturl!);
     if (!response.ok) {
-      setTip("asset拉去失败：HTTP error! status:" + response.status);
+      setTip(t('common.error') + ": HTTP " + t('common.error') + "! " + t('common.error') + ":" + response.status);
       setLoading(false);
       return;
     }
@@ -105,7 +107,7 @@ export function AutoImportChat({ asseturl }: AutoImportChatProps) {
       setLoading(false);
     }
     catch(e) {
-      setTip("exception:" + e);
+      setTip(t('common.error') + ":" + e);
       setLoading(false);
     }
   }
@@ -123,6 +125,7 @@ export function AutoImportChat({ asseturl }: AutoImportChatProps) {
   );
 }
 export function Chat() {
+  const { t } = useTranslation();
   renderLogger.trace('Chat');
 
   const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();

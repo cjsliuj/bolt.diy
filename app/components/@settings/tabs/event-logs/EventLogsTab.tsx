@@ -8,6 +8,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Dialog, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { jsPDF } from 'jspdf';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 interface SelectOption {
   value: string;
@@ -69,6 +70,7 @@ interface LogEntryItemProps {
 }
 
 const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp }: LogEntryItemProps) => {
+  const { t } = useTranslation('common');
   const [localExpanded, setLocalExpanded] = useState(forceExpanded);
 
   useEffect(() => {
@@ -144,7 +146,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
           </div>
           {details.prompt && (
             <div className="flex flex-col gap-1">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Prompt:</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('common.promptLabel')}</div>
               <pre className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded p-2 whitespace-pre-wrap">
                 {details.prompt}
               </pre>
@@ -152,7 +154,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
           )}
           {details.response && (
             <div className="flex flex-col gap-1">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Response:</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('common.responseLabel')}</div>
               <pre className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded p-2 whitespace-pre-wrap">
                 {details.response}
               </pre>
@@ -175,7 +177,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
           <div className="text-xs text-gray-600 dark:text-gray-400 break-all">{details.url}</div>
           {details.request && (
             <div className="flex flex-col gap-1">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Request:</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('common.requestLabel')}</div>
               <pre className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded p-2 whitespace-pre-wrap">
                 {JSON.stringify(details.request, null, 2)}
               </pre>
@@ -183,7 +185,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
           )}
           {details.response && (
             <div className="flex flex-col gap-1">
-              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Response:</div>
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('common.responseLabel')}</div>
               <pre className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded p-2 whitespace-pre-wrap">
                 {JSON.stringify(details.response, null, 2)}
               </pre>
@@ -191,6 +193,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
           )}
           {details.error && (
             <div className="flex flex-col gap-1">
+              <div className="text-xs font-medium text-red-500">{t('common.errorLabel')}</div>
               <div className="text-xs font-medium text-red-500">Error:</div>
               <pre className="text-xs text-red-400 bg-red-50 dark:bg-red-500/10 rounded p-2 whitespace-pre-wrap">
                 {JSON.stringify(details.error, null, 2)}

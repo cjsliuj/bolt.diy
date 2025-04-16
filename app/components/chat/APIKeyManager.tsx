@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { IconButton } from '~/components/ui/IconButton';
 import type { ProviderInfo } from '~/types/model';
 import Cookies from 'js-cookie';
+import { useTranslation } from 'react-i18next';
 
 interface APIKeyManagerProps {
   provider: ProviderInfo;
@@ -33,6 +34,7 @@ export function getApiKeysFromCookies() {
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, setApiKey }) => {
+  const { t } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
   const [tempKey, setTempKey] = useState(apiKey);
   const [isEnvKeySet, setIsEnvKeySet] = useState(false);
@@ -89,23 +91,25 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
     <div className="flex items-center justify-between py-3 px-1">
       <div className="flex items-center gap-2 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-bolt-elements-textSecondary">{provider?.name} API Key:</span>
+          <span className="text-sm font-medium text-bolt-elements-textSecondary">
+            {t('header.providerApiKeyLabel', { provider: provider?.name })}
+          </span>
           {!isEditing && (
             <div className="flex items-center gap-2">
               {apiKey ? (
                 <>
                   <div className="i-ph:check-circle-fill text-green-500 w-4 h-4" />
-                  <span className="text-xs text-green-500">Set via UI</span>
+                  <span className="text-xs text-green-500">{t('header.apiKeySetViaUI')}</span>
                 </>
               ) : isEnvKeySet ? (
                 <>
                   <div className="i-ph:check-circle-fill text-green-500 w-4 h-4" />
-                  <span className="text-xs text-green-500">Set via environment variable</span>
+                  <span className="text-xs text-green-500">{t('header.apiKeySetViaEnv')}</span>
                 </>
               ) : (
                 <>
                   <div className="i-ph:x-circle-fill text-red-500 w-4 h-4" />
-                  <span className="text-xs text-red-500">Not Set (Please set via UI or ENV_VAR)</span>
+                  <span className="text-xs text-red-500">{t('header.apiKeyNotSet')}</span>
                 </>
               )}
             </div>
@@ -119,7 +123,7 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
             <input
               type="password"
               value={tempKey}
-              placeholder="Enter API Key"
+              placeholder={t('chat.enterApiKey')}
               onChange={(e) => setTempKey(e.target.value)}
               className="w-[300px] px-3 py-1.5 text-sm rounded border border-bolt-elements-borderColor 
                         bg-bolt-elements-prompt-background text-bolt-elements-textPrimary 
@@ -127,14 +131,14 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
             />
             <IconButton
               onClick={handleSave}
-              title="Save API Key"
+              title={t('header.saveApiKey')}
               className="bg-green-500/10 hover:bg-green-500/20 text-green-500"
             >
               <div className="i-ph:check w-4 h-4" />
             </IconButton>
             <IconButton
               onClick={() => setIsEditing(false)}
-              title="Cancel"
+              title={t('common.cancel')}
               className="bg-red-500/10 hover:bg-red-500/20 text-red-500"
             >
               <div className="i-ph:x w-4 h-4" />
@@ -145,7 +149,7 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
             {
               <IconButton
                 onClick={() => setIsEditing(true)}
-                title="Edit API Key"
+                title={t('header.editApiKey')}
                 className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-500"
               >
                 <div className="i-ph:pencil-simple w-4 h-4" />
@@ -154,10 +158,10 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
             {provider?.getApiKeyLink && !apiKey && (
               <IconButton
                 onClick={() => window.open(provider?.getApiKeyLink)}
-                title="Get API Key"
+                title={t('header.getApiKey')}
                 className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 flex items-center gap-2"
               >
-                <span className="text-xs whitespace-nowrap">{provider?.labelForGetApiKey || 'Get API Key'}</span>
+                <span className="text-xs whitespace-nowrap">{provider?.labelForGetApiKey || t('header.getApiKey')}</span>
                 <div className={`${provider?.icon || 'i-ph:key'} w-4 h-4`} />
               </IconButton>
             )}

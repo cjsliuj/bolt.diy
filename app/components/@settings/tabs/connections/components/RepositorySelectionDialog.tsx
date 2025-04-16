@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { formatSize } from '~/utils/formatSize';
 import { Input } from '~/components/ui/Input';
 import Cookies from 'js-cookie';
+import { useTranslation } from 'react-i18next';
 
 interface GitHubTreeResponse {
   tree: Array<{
@@ -38,6 +39,7 @@ interface StatsDialogProps {
 }
 
 function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDialogProps) {
+  const { t } = useTranslation('common');
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
@@ -79,13 +81,13 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
                       {stats.hasPackageJson && (
                         <div className="flex items-center gap-2">
                           <span className="i-ph:package text-purple-500 w-4 h-4" />
-                          <span>Has package.json</span>
+                          <span>{t('settings.connections.hasPackageJson')}</span>
                         </div>
                       )}
                       {stats.hasDependencies && (
                         <div className="flex items-center gap-2">
                           <span className="i-ph:tree-structure text-purple-500 w-4 h-4" />
-                          <span>Has dependencies</span>
+                          <span>{t('settings.connections.hasDependencies')}</span>
                         </div>
                       )}
                     </div>
@@ -124,6 +126,7 @@ function StatsDialog({ isOpen, onClose, onConfirm, stats, isLargeRepo }: StatsDi
 }
 
 function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { t } = useTranslation('common');
   const [token, setToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tokenType, setTokenType] = useState<'classic' | 'fine-grained'>('classic');
@@ -216,8 +219,8 @@ function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                         type="password"
                         value={token}
                         onChange={(e) => setToken(e.target.value)}
-                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                        className="w-full px-3 py-1.5 rounded-lg border border-[#E5E5E5] dark:border-[#333333] bg-white dark:bg-[#1A1A1A] text-[#111111] dark:text-white placeholder-[#999999] text-sm"
+                        placeholder={t('settings.connections.githubTokenPlaceholder')}
+                        className="w-full px-3 py-2 rounded-lg bg-[#F5F5F5] dark:bg-[#1A1A1A] border border-[#E5E5E5] dark:border-[#333333] text-[#111111] dark:text-white placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                       />
                       <div className="mt-1 text-xs text-[#666666] dark:text-[#999999]">
                         Get your token at{' '}
@@ -238,20 +241,24 @@ function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                         <label className="flex items-center gap-2">
                           <input
                             type="radio"
+                            name="tokenType"
+                            value="classic"
                             checked={tokenType === 'classic'}
                             onChange={() => setTokenType('classic')}
-                            className="w-3.5 h-3.5 accent-purple-500"
+                            className="mr-2"
                           />
-                          <span className="text-sm text-[#111111] dark:text-white">Classic</span>
+                          <span className="text-sm text-[#111111] dark:text-white">{t('settings.connections.githubTokenTypeClassic')}</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className="flex items-center">
                           <input
                             type="radio"
+                            name="tokenType"
+                            value="fine-grained"
                             checked={tokenType === 'fine-grained'}
                             onChange={() => setTokenType('fine-grained')}
-                            className="w-3.5 h-3.5 accent-purple-500"
+                            className="mr-2"
                           />
-                          <span className="text-sm text-[#111111] dark:text-white">Fine-grained</span>
+                          <span className="text-sm text-[#111111] dark:text-white">{t('settings.connections.githubTokenTypeFineGrained')}</span>
                         </label>
                       </div>
                     </div>
@@ -302,6 +309,7 @@ function GitHubAuthDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 }
 
 export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: RepositorySelectionDialogProps) {
+  const { t } = useTranslation('common');
   const [selectedRepository, setSelectedRepository] = useState<GitHubRepoInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [repositories, setRepositories] = useState<GitHubRepoInfo[]>([]);
@@ -927,10 +935,10 @@ export function RepositorySelectionDialog({ isOpen, onClose, onSelect }: Reposit
                       </div>
                       <input
                         type="number"
-                        placeholder="Min forks..."
+                        placeholder={t('settings.connections.minForksPlaceholder')}
+                        className="px-3 py-1.5 text-sm w-24 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         value={filters.forks || ''}
                         onChange={(e) => handleFilterChange('forks', e.target.value)}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-[#F5F5F5] dark:bg-[#252525] border border-[#E5E5E5] dark:border-[#333333]"
                       />
                     </div>
                   )}

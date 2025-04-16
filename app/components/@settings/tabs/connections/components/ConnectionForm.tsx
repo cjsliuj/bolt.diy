@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { classNames } from '~/utils/classNames';
 import type { GitHubAuthState } from '~/components/@settings/tabs/connections/types/GitHub';
 import Cookies from 'js-cookie';
 import { getLocalStorage } from '~/lib/persistence';
+import { motion } from 'framer-motion';
+import { IconButton } from '~/components/ui/IconButton';
+import { useTranslation } from 'react-i18next';
 
 const GITHUB_TOKEN_KEY = 'github_token';
 
@@ -14,6 +17,9 @@ interface ConnectionFormProps {
 }
 
 export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }: ConnectionFormProps) {
+  const { t } = useTranslation('common');
+  const [isVerifying, setIsVerifying] = useState(false);
+
   // Check for saved token on mount
   useEffect(() => {
     const savedToken = Cookies.get(GITHUB_TOKEN_KEY) || Cookies.get('githubToken') || getLocalStorage(GITHUB_TOKEN_KEY);
@@ -119,7 +125,7 @@ export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }
                 'focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500',
                 'transition-all duration-200',
               )}
-              placeholder="ghp_xxxxxxxxxxxx"
+              placeholder={t('settings.connections.genericTokenPlaceholder')}
             />
           </div>
 
@@ -137,15 +143,12 @@ export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }
                   )}
                 >
                   {authState.isVerifying ? (
-                    <>
-                      <div className="i-ph:spinner animate-spin" />
-                      <span>Verifying...</span>
-                    </>
+                    <span className="flex items-center">
+                      <div className="i-svg-spinners:8-dots-rotate w-5 h-5 mr-2 animate-spin" />
+                      <span>{t('settings.connections.verifying')}</span>
+                    </span>
                   ) : (
-                    <>
-                      <div className="i-ph:plug-fill" />
-                      <span>Connect</span>
-                    </>
+                    <span>{t('settings.connections.connect')}</span>
                   )}
                 </button>
               ) : (
@@ -159,8 +162,7 @@ export function ConnectionForm({ authState, setAuthState, onSave, onDisconnect }
                       'text-bolt-elements-textPrimary',
                     )}
                   >
-                    <div className="i-ph:plug-fill" />
-                    <span>Disconnect</span>
+                    <span>{t('settings.connections.disconnect')}</span>
                   </button>
                   <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-green-600 dark:text-green-400 bg-green-500/5 rounded-lg border border-green-500/20">
                     <div className="i-ph:check-circle-fill" />

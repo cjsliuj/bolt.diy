@@ -10,6 +10,7 @@ import { Badge } from '~/components/ui/Badge';
 import { Dialog, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { jsPDF } from 'jspdf';
 import { useSettings } from '~/lib/hooks/useSettings';
+import { useTranslation } from 'react-i18next'; // Import hook
 
 interface SystemInfo {
   os: string;
@@ -219,6 +220,7 @@ const DependencySection = ({
 };
 
 export default function DebugTab() {
+  const { t } = useTranslation('common'); // Use hook
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [webAppInfo, setWebAppInfo] = useState<WebAppInfo | null>(null);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaServiceStatus>({
@@ -1245,14 +1247,14 @@ export default function DebugTab() {
           )}
         >
           <span className="i-ph:download text-lg text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />
-          Export
+          {t('common.export')}
         </button>
 
         <Dialog showCloseButton>
           <div className="p-6">
             <DialogTitle className="flex items-center gap-2">
               <div className="i-ph:download w-5 h-5" />
-              Export Debug Information
+              {t('debug.exportDebugInfo')}
             </DialogTitle>
 
             <div className="mt-4 flex flex-col gap-2">
@@ -1273,10 +1275,10 @@ export default function DebugTab() {
                   <div>
                     <div className="font-medium">{format.label}</div>
                     <div className="text-xs text-bolt-elements-textSecondary mt-0.5">
-                      {format.id === 'json' && 'Export as a structured JSON file'}
-                      {format.id === 'csv' && 'Export as a CSV spreadsheet'}
-                      {format.id === 'pdf' && 'Export as a formatted PDF document'}
-                      {format.id === 'txt' && 'Export as a formatted text file'}
+                      {format.id === 'json' && t('debug.exportJsonDescription')}
+                      {format.id === 'csv' && t('debug.exportCsvDescription')}
+                      {format.id === 'pdf' && t('debug.exportPdfDescription')}
+                      {format.id === 'txt' && t('debug.exportTxtDescription')}
                     </div>
                   </div>
                 </button>
@@ -1295,29 +1297,29 @@ export default function DebugTab() {
 
     if (!isOllamaEnabled) {
       return {
-        status: 'Disabled',
+        status: t('debug.disabled'),
         color: 'text-red-500',
         bgColor: 'bg-red-500',
-        message: 'Ollama provider is disabled in settings',
+        message: t('debug.ollamaProviderDisabled'),
       };
     }
 
     if (!ollamaStatus.isRunning) {
       return {
-        status: 'Not Running',
+        status: t('debug.notRunning'),
         color: 'text-red-500',
         bgColor: 'bg-red-500',
-        message: ollamaStatus.error || 'Ollama service is not running',
+        message: ollamaStatus.error || t('debug.ollamaServiceNotRunning'),
       };
     }
 
     const modelCount = ollamaStatus.models?.length ?? 0;
 
     return {
-      status: 'Running',
+      status: t('debug.running'),
       color: 'text-green-500',
       bgColor: 'bg-green-500',
-      message: `Ollama service is running with ${modelCount} installed models (Provider: Enabled)`,
+      message: t('debug.ollamaServiceRunning', { modelCount, isOllamaEnabled: t('common.enabled') }),
     };
   };
 
@@ -1338,8 +1340,9 @@ export default function DebugTab() {
         {/* Errors Card */}
         <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
           <div className="flex items-center gap-2">
-            <div className="i-ph:warning-octagon text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Errors</div>
+            <div className="i-ph:warning text-red-500 w-4 h-4" />
+            <div className="text-sm text-bolt-elements-textSecondary">{t('common.errors')}</div>
+            <Badge variant="destructive">{errorLogs.length}</Badge>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span
@@ -1355,15 +1358,15 @@ export default function DebugTab() {
                 errorLogs.length > 0 ? 'i-ph:warning text-red-500' : 'i-ph:check-circle text-green-500',
               )}
             />
-            {errorLogs.length > 0 ? 'Errors detected' : 'No errors detected'}
+            {errorLogs.length > 0 ? t('debug.errorsDetected') : t('debug.noErrorsDetected')}
           </div>
         </div>
 
         {/* Memory Usage Card */}
         <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
           <div className="flex items-center gap-2">
-            <div className="i-ph:cpu text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Memory Usage</div>
+            <div className="i-ph:cpu w-4 h-4 text-cyan-500" />
+            <div className="text-sm text-bolt-elements-textSecondary">{t('debug.memoryUsage')}</div>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span
@@ -1392,7 +1395,7 @@ export default function DebugTab() {
           />
           <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
             <div className="i-ph:info w-3.5 h-3.5 text-purple-500" />
-            Used: {systemInfo?.memory.used ?? '0 GB'} / {systemInfo?.memory.total ?? '0 GB'}
+            {t('debug.usedMemory', { used: systemInfo?.memory.used ?? '0 GB', total: systemInfo?.memory.total ?? '0 GB' })}
           </div>
         </div>
 
@@ -1400,7 +1403,7 @@ export default function DebugTab() {
         <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
           <div className="flex items-center gap-2">
             <div className="i-ph:timer text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Page Load Time</div>
+            <div className="text-sm text-bolt-elements-textSecondary">{t('debug.pageLoadTime')}</div>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span
@@ -1418,7 +1421,7 @@ export default function DebugTab() {
           </div>
           <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
             <div className="i-ph:code w-3.5 h-3.5 text-purple-500" />
-            DOM Ready: {systemInfo ? (systemInfo.performance.timing.domReadyTime / 1000).toFixed(2) : '-'}s
+            {t('debug.domReady', { time: systemInfo ? (systemInfo.performance.timing.domReadyTime / 1000).toFixed(2) : '-' })}
           </div>
         </div>
 
@@ -1426,7 +1429,7 @@ export default function DebugTab() {
         <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-[#E5E5E5] dark:border-[#1A1A1A] hover:border-purple-500/30 transition-all duration-200 h-[180px] flex flex-col">
           <div className="flex items-center gap-2">
             <div className="i-ph:wifi-high text-purple-500 w-4 h-4" />
-            <div className="text-sm text-bolt-elements-textSecondary">Network Speed</div>
+            <div className="text-sm text-bolt-elements-textSecondary">{t('debug.networkSpeed')}</div>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span
@@ -1444,7 +1447,7 @@ export default function DebugTab() {
           </div>
           <div className="text-xs text-bolt-elements-textSecondary mt-2 flex items-center gap-1.5">
             <div className="i-ph:activity w-3.5 h-3.5 text-purple-500" />
-            RTT: {systemInfo?.network.rtt ?? '-'} ms
+            {t('debug.rtt', { rtt: systemInfo?.network.rtt ?? '-' })}
           </div>
         </div>
 

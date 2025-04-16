@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from 'react';
 import { bundledLanguages, codeToHtml, isSpecialLang, type BundledLanguage, type SpecialLanguage } from 'shiki';
 import { classNames } from '~/utils/classNames';
 import { createScopedLogger } from '~/utils/logger';
+import { useTranslation } from 'react-i18next';
 
 import styles from './CodeBlock.module.scss';
 
@@ -17,6 +18,7 @@ interface CodeBlockProps {
 
 export const CodeBlock = memo(
   ({ className, code, language = 'plaintext', theme = 'dark-plus', disableCopy = false }: CodeBlockProps) => {
+    const { t } = useTranslation('common');
     const [html, setHTML] = useState<string | undefined>(undefined);
     const [copied, setCopied] = useState(false);
 
@@ -68,7 +70,7 @@ export const CodeBlock = memo(
                   'before:opacity-100': copied,
                 },
               )}
-              title="Copy Code"
+              title={t('common.copyCode')}
               onClick={() => copyToClipboard()}
             >
               <div className="i-ph:clipboard-text-duotone"></div>

@@ -14,6 +14,7 @@ import { TbBrain, TbCloudComputing } from 'react-icons/tb';
 import { BiCodeBlock, BiChip } from 'react-icons/bi';
 import { FaCloud, FaBrain } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
+import { useTranslation } from 'react-i18next';
 
 // Add type for provider names to ensure type safety
 type ProviderName =
@@ -57,6 +58,7 @@ const PROVIDER_DESCRIPTIONS: Partial<Record<ProviderName, string>> = {
 };
 
 const CloudProvidersTab = () => {
+  const { t } = useTranslation('common');
   const settings = useSettings();
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [filteredProviders, setFilteredProviders] = useState<IProviderConfig[]>([]);
@@ -150,13 +152,13 @@ const CloudProvidersTab = () => {
               <TbCloudComputing className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-md font-medium text-bolt-elements-textPrimary">Cloud Providers</h4>
-              <p className="text-sm text-bolt-elements-textSecondary">Connect to cloud-based AI models and services</p>
+              <h4 className="text-md font-medium text-bolt-elements-textPrimary">{t('chat.cloudTitle')}</h4>
+              <p className="text-sm text-bolt-elements-textSecondary">{t('chat.cloudDescription')}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm text-bolt-elements-textSecondary">Enable All Cloud</span>
+            <span className="text-sm text-bolt-elements-textSecondary">{t('chat.enableAllCloud')}</span>
             <Switch checked={categoryEnabled} onCheckedChange={handleToggleCategory} />
           </div>
         </div>
@@ -185,7 +187,7 @@ const CloudProvidersTab = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Configurable
+                    {t('settings.providers.configurableTag')}
                   </motion.span>
                 )}
               </div>

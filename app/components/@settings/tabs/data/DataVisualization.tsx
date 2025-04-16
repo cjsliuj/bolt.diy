@@ -14,6 +14,7 @@ import {
 import { Bar, Pie } from 'react-chartjs-2';
 import type { Chat } from '~/lib/persistence/chats';
 import { classNames } from '~/utils/classNames';
+import { useTranslation } from 'react-i18next';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
@@ -23,6 +24,7 @@ type DataVisualizationProps = {
 };
 
 export function DataVisualization({ chats }: DataVisualizationProps) {
+  const { t } = useTranslation('common');
   const [chatsByDate, setChatsByDate] = useState<Record<string, number>>({});
   const [messagesByRole, setMessagesByRole] = useState<Record<string, number>>({});
   const [apiKeyUsage, setApiKeyUsage] = useState<Array<{ provider: string; count: number }>>([]);
@@ -357,14 +359,14 @@ export function DataVisualization({ chats }: DataVisualizationProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className={cardClasses}>
-          <h3 className="text-lg font-medium text-bolt-elements-textPrimary mb-6">Chat History</h3>
+          <h3 className="text-lg font-medium text-bolt-elements-textPrimary mb-6">{t('settings.data.chatHistoryTitle')}</h3>
           <div className="h-64">
             <Bar data={chartData.history} options={chartOptions} />
           </div>
         </div>
 
         <div className={cardClasses}>
-          <h3 className="text-lg font-medium text-bolt-elements-textPrimary mb-6">Message Distribution</h3>
+          <h3 className="text-lg font-medium text-bolt-elements-textPrimary mb-6">{t('settings.data.messageRolesTitle')}</h3>
           <div className="h-64">
             <Pie data={chartData.roles} options={pieOptions} />
           </div>
@@ -373,7 +375,7 @@ export function DataVisualization({ chats }: DataVisualizationProps) {
 
       {apiKeyUsage.length > 0 && (
         <div className={cardClasses}>
-          <h3 className="text-lg font-medium text-bolt-elements-textPrimary mb-6">API Usage by Provider</h3>
+          <h3 className="text-lg font-medium text-bolt-elements-textPrimary mb-6">{t('settings.data.apiUsageChartTitle')}</h3>
           <div className="h-64">
             <Pie data={chartData.apiUsage} options={pieOptions} />
           </div>

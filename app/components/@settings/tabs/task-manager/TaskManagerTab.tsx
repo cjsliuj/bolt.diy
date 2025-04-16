@@ -17,6 +17,7 @@ import { toast } from 'react-toastify'; // Import toast
 import { useUpdateCheck } from '~/lib/hooks/useUpdateCheck';
 import { tabConfigurationStore, type TabConfig } from '~/lib/stores/tabConfigurationStore';
 import { useStore } from 'zustand';
+import { useTranslation } from 'react-i18next'; // Import hook
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -252,6 +253,7 @@ const isServerlessHosting = (): boolean => {
 };
 
 const TaskManagerTab: React.FC = () => {
+  const { t } = useTranslation('common'); // Use hook
   const [metrics, setMetrics] = useState<SystemMetrics>(() => DEFAULT_METRICS_STATE);
   const [metricsHistory, setMetricsHistory] = useState<MetricsHistory>(() => DEFAULT_METRICS_HISTORY);
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
@@ -259,6 +261,7 @@ const TaskManagerTab: React.FC = () => {
   const [sortField, setSortField] = useState<SortField>('memory');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isNotSupported, setIsNotSupported] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'processes' | 'performance' | 'network' | 'memory' | 'disk'>('processes');
 
   // Chart refs for cleanup
   const memoryChartRef = React.useRef<Chart<'line', number[], string> | null>(null);
@@ -1090,7 +1093,10 @@ const TaskManagerTab: React.FC = () => {
       {/* Summary Header */}
       <div className="grid grid-cols-4 gap-4">
         <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-[#F8F8F8] dark:bg-[#141414]">
-          <div className="text-sm text-bolt-elements-textSecondary">CPU</div>
+          <div className="flex items-center gap-2">
+            <div className="i-ph:cpu w-4 h-4 text-cyan-500" />
+            <div className="text-sm text-bolt-elements-textSecondary">{t('settings.taskManager.cpu')}</div>
+          </div>
           <div
             className={classNames(
               'text-xl font-semibold',
@@ -1101,13 +1107,19 @@ const TaskManagerTab: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-[#F8F8F8] dark:bg-[#141414]">
-          <div className="text-sm text-bolt-elements-textSecondary">Memory</div>
+          <div className="flex items-center gap-2">
+            <div className="i-ph:memory w-4 h-4 text-green-500" />
+            <div className="text-sm text-bolt-elements-textSecondary">{t('settings.taskManager.memory')}</div>
+          </div>
           <div className={classNames('text-xl font-semibold', getUsageColor(metrics.systemMemory?.percentage || 0))}>
             {Math.round(metrics.systemMemory?.percentage || 0)}%
           </div>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-[#F8F8F8] dark:bg-[#141414]">
-          <div className="text-sm text-bolt-elements-textSecondary">Disk</div>
+          <div className="flex items-center gap-2">
+            <div className="i-ph:hard-drive w-4 h-4 text-orange-500" />
+            <div className="text-sm text-bolt-elements-textSecondary">{t('settings.taskManager.disk')}</div>
+          </div>
           <div
             className={classNames(
               'text-xl font-semibold',

@@ -14,6 +14,7 @@ import { providerBaseUrlEnvKeys } from '~/utils/constants';
 import { useToast } from '~/components/ui/use-toast';
 import { Progress } from '~/components/ui/Progress';
 import OllamaModelInstaller from './OllamaModelInstaller';
+import { useTranslation } from 'react-i18next';
 
 // Add type for provider names to ensure type safety
 type ProviderName = 'Ollama' | 'LMStudio' | 'OpenAILike';
@@ -72,6 +73,7 @@ const isOllamaPullResponse = (data: unknown): data is OllamaPullResponse => {
 };
 
 export default function LocalProvidersTab() {
+  const { t } = useTranslation('common');
   const { providers, updateProviderSettings } = useSettings();
   const [filteredProviders, setFilteredProviders] = useState<IProviderConfig[]>([]);
   const [categoryEnabled, setCategoryEnabled] = useState(false);
@@ -392,34 +394,27 @@ export default function LocalProvidersTab() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        {/* Header section */}
-        <div className="flex items-center justify-between gap-4 border-b border-bolt-elements-borderColor pb-4">
+        {/* Local Providers Header */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <motion.div
-              className={classNames(
-                'w-10 h-10 flex items-center justify-center rounded-xl',
-                'bg-purple-500/10 text-purple-500',
-              )}
-              whileHover={{ scale: 1.05 }}
-            >
-              <BiChip className="w-6 h-6" />
-            </motion.div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-bolt-elements-textPrimary">Local AI Models</h2>
-              </div>
-              <p className="text-sm text-bolt-elements-textSecondary">Configure and manage your local AI providers</p>
-            </div>
+            <BsRobot className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <h2 className="text-lg font-semibold text-bolt-elements-textPrimary">
+              {t('settings.providers.localTitle')}
+            </h2>
           </div>
+          <p className="text-sm text-bolt-elements-textSecondary">
+            {t('settings.providers.localDescription')}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-bolt-elements-textSecondary">Enable All</span>
-            <Switch
-              checked={categoryEnabled}
-              onCheckedChange={handleToggleCategory}
-              aria-label="Toggle all local providers"
-            />
-          </div>
+        {/* Global Toggle for Local Providers */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700/50">
+          <span className="text-sm font-medium text-bolt-elements-textPrimary">{t('settings.providers.enableAll')}</span>
+          <Switch
+            checked={categoryEnabled}
+            onCheckedChange={handleToggleCategory}
+            aria-label="Toggle all local providers"
+          />
         </div>
 
         {/* Ollama Section */}

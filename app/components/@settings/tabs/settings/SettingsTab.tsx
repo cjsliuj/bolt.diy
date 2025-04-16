@@ -5,6 +5,7 @@ import { classNames } from '~/utils/classNames';
 import { Switch } from '~/components/ui/Switch';
 import type { UserProfile } from '~/components/@settings/core/types';
 import { isMac } from '~/utils/os';
+import { useTranslation } from 'react-i18next';
 
 // Helper to get modifier key symbols/text
 const getModifierSymbol = (modifier: string): string => {
@@ -21,6 +22,7 @@ const getModifierSymbol = (modifier: string): string => {
 };
 
 export default function SettingsTab() {
+  const { t } = useTranslation('common');
   const [currentTimezone, setCurrentTimezone] = useState('');
   const [settings, setSettings] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('bolt_user_profile');
@@ -70,13 +72,13 @@ export default function SettingsTab() {
       >
         <div className="flex items-center gap-2 mb-4">
           <div className="i-ph:palette-fill w-4 h-4 text-purple-500" />
-          <span className="text-sm font-medium text-bolt-elements-textPrimary">Preferences</span>
+          <span className="text-sm font-medium text-bolt-elements-textPrimary">{t('settings.preferences')}</span>
         </div>
 
         <div>
           <div className="flex items-center gap-2 mb-2">
             <div className="i-ph:translate-fill w-4 h-4 text-bolt-elements-textSecondary" />
-            <label className="block text-sm text-bolt-elements-textSecondary">Language</label>
+            <label className="block text-sm text-bolt-elements-textSecondary">{t('settings.language')}</label>
           </div>
           <select
             value={settings.language}
@@ -90,16 +92,16 @@ export default function SettingsTab() {
               'transition-all duration-200',
             )}
           >
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-            <option value="it">Italiano</option>
-            <option value="pt">Português</option>
-            <option value="ru">Русский</option>
-            <option value="zh">中文</option>
-            <option value="ja">日本語</option>
-            <option value="ko">한국어</option>
+            <option value="en">{t('settings.languages.english')}</option>
+            <option value="es">{t('settings.languages.spanish')}</option>
+            <option value="fr">{t('settings.languages.french')}</option>
+            <option value="de">{t('settings.languages.german')}</option>
+            <option value="it">{t('settings.languages.italian')}</option>
+            <option value="pt">{t('settings.languages.portuguese')}</option>
+            <option value="ru">{t('settings.languages.russian')}</option>
+            <option value="zh">{t('settings.languages.chinese')}</option>
+            <option value="ja">{t('settings.languages.japanese')}</option>
+            <option value="ko">{t('settings.languages.korean')}</option>
           </select>
         </div>
 
@@ -156,7 +158,7 @@ export default function SettingsTab() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <div className="i-ph:globe-fill w-4 h-4 text-bolt-elements-textSecondary" />
-            <label className="block text-sm text-bolt-elements-textSecondary">Timezone</label>
+            <label className="block text-sm text-bolt-elements-textSecondary">{t('settings.timezone')}</label>
           </div>
           <select
             value={settings.timezone}

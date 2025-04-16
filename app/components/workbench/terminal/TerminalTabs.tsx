@@ -8,6 +8,7 @@ import { workbenchStore } from '~/lib/stores/workbench';
 import { classNames } from '~/utils/classNames';
 import { Terminal, type TerminalRef } from './Terminal';
 import { createScopedLogger } from '~/utils/logger';
+import { useTranslation } from 'react-i18next';
 
 const logger = createScopedLogger('Terminal');
 
@@ -15,6 +16,7 @@ const MAX_TERMINALS = 3;
 export const DEFAULT_TERMINAL_SIZE = 25;
 
 export const TerminalTabs = memo(() => {
+  const { t } = useTranslation('common');
   const showTerminal = useStore(workbenchStore.showTerminal);
   const theme = useStore(themeStore);
 
@@ -107,7 +109,7 @@ export const TerminalTabs = memo(() => {
                       onClick={() => setActiveTerminal(index)}
                     >
                       <div className="i-ph:terminal-window-duotone text-lg" />
-                      Bolt Terminal
+                      {t('workbench.terminal.boltTerminalName')}
                     </button>
                   ) : (
                     <React.Fragment>
@@ -124,7 +126,7 @@ export const TerminalTabs = memo(() => {
                         onClick={() => setActiveTerminal(index)}
                       >
                         <div className="i-ph:terminal-window-duotone text-lg" />
-                        Terminal {terminalCount > 1 && index}
+                        {t('workbench.terminal.terminalName', { index })}
                       </button>
                     </React.Fragment>
                   )}
@@ -135,7 +137,7 @@ export const TerminalTabs = memo(() => {
             <IconButton
               className="ml-auto"
               icon="i-ph:caret-down"
-              title="Close"
+              title={t('common.close')}
               size="md"
               onClick={() => workbenchStore.toggleTerminal(false)}
             />

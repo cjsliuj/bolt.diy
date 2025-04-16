@@ -4,6 +4,7 @@ import { IconButton } from '~/components/ui/IconButton';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { PortDropdown } from './PortDropdown';
 import { ScreenshotSelector } from './ScreenshotSelector';
+import { useTranslation } from 'react-i18next';
 
 type ResizeSide = 'left' | 'right' | null;
 
@@ -46,6 +47,7 @@ const WINDOW_SIZES: WindowSize[] = [
 ];
 
 export const Preview = memo(() => {
+  const { t } = useTranslation('common');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -646,7 +648,7 @@ export const Preview = memo(() => {
 
         <div className="flex-grow flex items-center gap-1 bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-3 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive">
           <input
-            title="URL"
+            title={t('workbench.preview.url')}
             ref={inputRef}
             className="w-full bg-transparent outline-none"
             type="text"

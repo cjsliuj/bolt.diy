@@ -4,6 +4,7 @@ import { classNames } from '~/utils/classNames';
 import { Progress } from '~/components/ui/Progress';
 import { useToast } from '~/components/ui/use-toast';
 import { useSettings } from '~/lib/hooks/useSettings';
+import { useTranslation } from 'react-i18next';
 
 interface OllamaModelInstallerProps {
   onModelInstalled: () => void;
@@ -134,6 +135,7 @@ function OllamaIcon({ className }: { className?: string }) {
 }
 
 export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelInstallerProps) {
+  const { t } = useTranslation('common');
   const [modelString, setModelString] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInstalling, setIsInstalling] = useState(false);
@@ -387,7 +389,9 @@ export default function OllamaModelInstaller({ onModelInstalled }: OllamaModelIn
         <div className="flex items-center gap-3">
           <OllamaIcon className="w-8 h-8 text-purple-500" />
           <div>
-            <h3 className="text-lg font-semibold text-bolt-elements-textPrimary">Ollama Models</h3>
+            <h3 className="text-lg font-semibold text-bolt-elements-textPrimary">
+              {t('settings.providers.ollamaModelsTitle')}
+            </h3>
             <p className="text-sm text-bolt-elements-textSecondary mt-1">Install and manage your Ollama models</p>
           </div>
         </div>

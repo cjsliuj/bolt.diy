@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { Dialog, DialogRoot, DialogTitle, DialogDescription, DialogButton } from '~/components/ui/Dialog';
 import { classNames } from '~/utils/classNames';
 import { Markdown } from '~/components/chat/Markdown';
+import { useTranslation } from 'react-i18next';
 
 interface UpdateProgress {
   stage: 'fetch' | 'pull' | 'install' | 'build' | 'complete';
@@ -43,7 +44,7 @@ const ProgressBar = ({ progress }: { progress: number }) => (
   </div>
 );
 
-const UpdateProgressDisplay = ({ progress }: { progress: UpdateProgress }) => (
+const UpdateProgressDisplay = ({ progress, t }: { progress: UpdateProgress, t: any }) => (
   <div className="mt-4 space-y-2">
     <div className="flex justify-between items-center">
       <span className="text-sm font-medium">{progress.message}</span>
@@ -54,7 +55,7 @@ const UpdateProgressDisplay = ({ progress }: { progress: UpdateProgress }) => (
       <div className="mt-2 text-sm text-gray-600">
         {progress.details.changedFiles && progress.details.changedFiles.length > 0 && (
           <div className="mt-4">
-            <div className="font-medium mb-2">Changed Files:</div>
+            <div className="font-medium mb-2">{t('settings.update.changedFilesLabel')}</div>
             <div className="space-y-2">
               {/* Group files by type */}
               {['Modified', 'Added', 'Deleted'].map((type) => {
@@ -119,6 +120,7 @@ const UpdateProgressDisplay = ({ progress }: { progress: UpdateProgress }) => (
 );
 
 const UpdateTab = () => {
+  const { t } = useTranslation('common');
   const { isLatestBranch } = useSettings();
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -373,10 +375,10 @@ const UpdateTab = () => {
                 'transition-colors duration-200',
               )}
             >
-              <option value="6">6 hours</option>
-              <option value="12">12 hours</option>
-              <option value="24">24 hours</option>
-              <option value="48">48 hours</option>
+              <option value="6">{t('settings.update.checkIntervalHours', { count: 6 })}</option>
+              <option value="12">{t('settings.update.checkIntervalHours', { count: 12 })}</option>
+              <option value="24">{t('settings.update.checkIntervalHours', { count: 24 })}</option>
+              <option value="48">{t('settings.update.checkIntervalHours', { count: 48 })}</option>
             </select>
           </div>
         </div>
@@ -445,7 +447,7 @@ const UpdateTab = () => {
         </div>
 
         {/* Show progress information */}
-        {updateProgress && <UpdateProgressDisplay progress={updateProgress} />}
+        {updateProgress && <UpdateProgressDisplay progress={updateProgress} t={t} />}
 
         {error && <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">{error}</div>}
 
@@ -499,7 +501,7 @@ const UpdateTab = () => {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
               <div className="i-ph:scroll text-purple-500 w-5 h-5" />
-              <p className="font-medium">Changelog</p>
+              <p className="font-medium">{t('settings.update.changelogTitle')}</p>
             </div>
             <div className="bg-[#F5F5F5] dark:bg-[#1A1A1A] rounded-lg p-4 overflow-auto max-h-[300px]">
               <div className="prose dark:prose-invert prose-sm max-w-none">

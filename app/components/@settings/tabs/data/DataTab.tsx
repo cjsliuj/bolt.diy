@@ -9,6 +9,7 @@ import { getAllChats, type Chat } from '~/lib/persistence/chats';
 import { DataVisualization } from './DataVisualization';
 import { classNames } from '~/utils/classNames';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 // Create a custom hook to connect to the boltHistory database
 function useBoltHistoryDB() {
@@ -74,6 +75,7 @@ interface ChatItem {
 }
 
 export function DataTab() {
+  const { t } = useTranslation('common');
   // Use our custom hook for the boltHistory database
   const { db, isLoading: dbLoading } = useBoltHistoryDB();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -632,7 +634,7 @@ export function DataTab() {
 
       {/* API Keys Section */}
       <div>
-        <h2 className="text-xl font-semibold mb-4 text-bolt-elements-textPrimary">API Keys</h2>
+        <h2 className="text-xl font-semibold mb-4 text-bolt-elements-textPrimary">{t('settings.apiKeys')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card>
             <CardHeader>

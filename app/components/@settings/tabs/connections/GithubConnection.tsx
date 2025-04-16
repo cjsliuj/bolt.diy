@@ -6,6 +6,7 @@ import { classNames } from '~/utils/classNames';
 import Cookies from 'js-cookie';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '~/components/ui/Collapsible';
 import { Button } from '~/components/ui/Button';
+import { useTranslation } from 'react-i18next';
 
 interface GitHubUserResponse {
   login: string;
@@ -94,6 +95,7 @@ const GithubLogo = () => (
 );
 
 export default function GitHubConnection() {
+  const { t } = useTranslation('common');
   const [connection, setConnection] = useState<GitHubConnection>({
     user: null,
     token: '',
@@ -479,7 +481,12 @@ export default function GitHubConnection() {
   }, [connection.token, connection.user]);
 
   if (isLoading || isConnecting || isFetchingStats) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex items-center justify-center py-4 text-sm text-[#6B7280] dark:text-gray-400">
+        <LoadingSpinner />
+        <span className="ml-2">{t('common.loading')}</span>
+      </div>
+    );
   }
 
   const handleConnect = async (event: React.FormEvent) => {
@@ -554,11 +561,7 @@ export default function GitHubConnection() {
           <div className="text-xs text-bolt-elements-textSecondary bg-bolt-elements-background-depth-1 dark:bg-bolt-elements-background-depth-1 p-3 rounded-lg mb-4">
             <p className="flex items-center gap-1 mb-1">
               <span className="i-ph:lightbulb w-3.5 h-3.5 text-bolt-elements-icon-success dark:text-bolt-elements-icon-success" />
-              <span className="font-medium">Tip:</span> You can also set the{' '}
-              <code className="px-1 py-0.5 bg-bolt-elements-background-depth-2 dark:bg-bolt-elements-background-depth-2 rounded">
-                VITE_GITHUB_ACCESS_TOKEN
-              </code>{' '}
-              environment variable to connect automatically.
+              <span className="font-medium">{t('common.tipLabel')}</span> {t('settings.connections.githubTipDescription')}
             </p>
             <p>
               For fine-grained tokens, also set{' '}

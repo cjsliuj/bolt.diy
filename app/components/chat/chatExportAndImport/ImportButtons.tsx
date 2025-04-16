@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { ImportFolderButton } from '~/components/chat/ImportFolderButton';
 import { Button } from '~/components/ui/Button';
 import { classNames } from '~/utils/classNames';
+import { useTranslation } from 'react-i18next';
 
 type ChatData = {
   messages?: Message[]; // Standard Bolt format
@@ -10,6 +11,8 @@ type ChatData = {
 };
 
 export function ImportButtons(importChat: ((description: string, messages: Message[]) => Promise<void>) | undefined) {
+  const { t } = useTranslation('common');
+
   return (
     <div className="flex flex-col items-center justify-center w-auto">
       <input
@@ -76,7 +79,7 @@ export function ImportButtons(importChat: ((description: string, messages: Messa
             )}
           >
             <span className="i-ph:upload-simple w-4 h-4" />
-            Import Chat
+            {t('chat.importChat')}
           </Button>
           <ImportFolderButton
             importChat={importChat}
