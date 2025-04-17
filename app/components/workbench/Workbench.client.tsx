@@ -25,6 +25,9 @@ import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
 import { PushToGitHubDialog } from '~/components/@settings/tabs/connections/components/PushToGitHubDialog';
 import * as qiniu from 'qiniu-js';
+import InputTextDialog from '~/components/@settings/tabs/connections/components/InputTextDialog';
+
+
 import {
   S3Client,
   ListBucketsCommand,
@@ -283,7 +286,8 @@ const FileModifiedDropdown = memo(
   },
 );
 interface IFrameReplaceMessageData {
-  msgType:string,
+  msgType:"replaceImage"|"replaceText",
+  originalString:"", //仅当 msgType == replaceText时有此字段
   elementTag:"img"|"span",
   elementID:string,
   filePath:string
@@ -294,6 +298,8 @@ export const Workbench = memo(
 
     const [isSyncing, setIsSyncing] = useState(false);
     const [isPushDialogOpen, setIsPushDialogOpen] = useState(false);
+    const [isInputDialogOpen, setIsInputDialogOpen] = useState(false);
+    const [inpuDialogDefaultValue, setInpuDialogDefaultValue] = useState("")
     const [fileHistory, setFileHistory] = useState<Record<string, FileHistory>>({});
     const [iframeReplaceMessageData, setIframeReplaceMessageData] = useState<IFrameReplaceMessageData>();
     // const modifiedFiles = Array.from(useStore(workbenchStore.unsavedFiles).keys());
@@ -382,17 +388,21 @@ export const Workbench = memo(
       });
     }
     const handleIFrameMessage = (event:any) => {
-      console.log('Received message from iframe:', event.data);
-
       const data = event.data as IFrameReplaceMessageData
       const msgType = data["msgType"]
       if (msgType == undefined) {
         return
       }
+      console.log('hadle sub message from iframe:', event.data);
       setIframeReplaceMessageData(data);
-
-      const input = document.getElementById('imageSelectInput');
-      input?.click();
+      if (msgType == "replaceImage") {
+        const input = document.getElementById('imageSelectInput');
+        input?.click();
+      } else if (msgType == "replaceText") {
+        setInpuDialogDefaultValue(data?.originalString!)
+        console.log("originalString:",data?.originalString!)
+        setIsInputDialogOpen(true)
+      }
     };
     const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
       const file = e.target.files?.[0];
@@ -476,6 +486,39 @@ export const Workbench = memo(
       }
 
     }
+
+    function onInputDialogConfirm(newContent: string): void {
+      setIsInputDialogOpen(false)
+      var curContent = workbenchStore.getDocumentByFile(iframeReplaceMessageData?.filePath!).value
+      curContent = curContent.replace(
+        new RegExp("<!DOCTYPE html>", "gi"),
+        ""
+      );
+      const targetId = iframeReplaceMessageData!.elementID!;
+      const elementTag = iframeReplaceMessageData!.elementTag
+
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(curContent, 'text/xml');
+      const nodes = xmlDoc.evaluate(
+        `//${elementTag}[@id='${targetId}'][1]`,
+        xmlDoc,
+        null, // 无命名空间
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null
+      );
+      if (nodes.snapshotLength <= 0) {
+        console.warn(`未找到 ID 为 ${targetId} 的 img 标签`);
+        return;
+      }
+      const ele = nodes.snapshotItem(0) as HTMLElement;
+      ele.textContent = newContent;
+
+      const serializer = new XMLSerializer();
+      const modifiedXml = serializer.serializeToString(xmlDoc);
+      workbenchStore.setDocumentContentByFile(modifiedXml, iframeReplaceMessageData!.filePath!)
+      workbenchStore.saveFile(iframeReplaceMessageData!.filePath!)
+    }
+
     return (
       chatStarted && (
         <motion.div
@@ -484,6 +527,7 @@ export const Workbench = memo(
           variants={workbenchVariants}
           className="z-workbench"
         >
+
           <div
             className={classNames(
               'fixed top-[calc(var(--header-height)+1.5rem)] bottom-6 w-[var(--workbench-inner-width)] mr-4 z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
@@ -572,6 +616,9 @@ export const Workbench = memo(
               </div>
             </div>
           </div>
+          <InputTextDialog isOpen={isInputDialogOpen} onCancel={()=>{
+            setIsInputDialogOpen(false)
+          }} onConfirm={onInputDialogConfirm} value={inpuDialogDefaultValue}></InputTextDialog>
           <PushToGitHubDialog
             isOpen={isPushDialogOpen}
             onClose={() => setIsPushDialogOpen(false)}
@@ -597,6 +644,7 @@ export const Workbench = memo(
               }
             }}
           />
+
         </motion.div>
       )
     );
