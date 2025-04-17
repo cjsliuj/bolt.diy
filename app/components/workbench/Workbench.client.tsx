@@ -284,8 +284,9 @@ const FileModifiedDropdown = memo(
 );
 interface IFrameReplaceMessageData {
   msgType:string,
-  elementType:"img"|"span",
-  elementID:string
+  elementTag:"img"|"span",
+  elementID:string,
+  filePath:string
 }
 export const Workbench = memo(
   ({ chatStarted, isStreaming, actionRunner, metadata, updateChatMestaData }: WorkspaceProps) => {
@@ -381,18 +382,23 @@ export const Workbench = memo(
       });
     }
     const handleIFrameMessage = (event:any) => {
-      // console.log('Received message from iframe:', event.data);
+      console.log('Received message from iframe:', event.data);
+
       const data = event.data as IFrameReplaceMessageData
       const msgType = data["msgType"]
       if (msgType == undefined) {
         return
       }
       setIframeReplaceMessageData(data);
+
       const input = document.getElementById('imageSelectInput');
       input?.click();
     };
     const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
       const file = e.target.files?.[0];
+
+
+
       // const observer = {
       //   next(res:{}){
       //     console.log("res", res);
@@ -436,14 +442,32 @@ export const Workbench = memo(
       const command = new PutObjectCommand(input);
       const response = await S3.send(command);
       console.log(iframeReplaceMessageData)
-      if(iframeReplaceMessageData!.elementType == "img") {
-        var curContent = workbenchStore.currentDocument.get()!.value!
-        const url = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
-        curContent = curContent.replace("test.svg",url)
-        console.log(11111)
-        console.log(url)
-        console.log(curContent)
-        workbenchStore.setCurrentDocumentContent(curContent)
+      if(iframeReplaceMessageData!.elementTag == "img") {
+        // var curContent = workbenchStore.currentDocument.get()!.value!
+        var curContent = workbenchStore.getDocumentByFile(iframeReplaceMessageData?.filePath!).value
+        const targetId = iframeReplaceMessageData!.elementID!;
+        const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
+        const elementTag = iframeReplaceMessageData!.elementTag
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(curContent, 'text/xml');
+        const nodes = xmlDoc.evaluate(
+          `//${elementTag}[@id='${targetId}']`,
+          xmlDoc,
+          null, // 无命名空间
+          XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+          null
+        );
+        if (nodes.snapshotLength > 0) {
+          const imgElement = nodes.snapshotItem(0) as HTMLImageElement;
+          imgElement.setAttribute('src', newSrc);
+        } else {
+          console.warn(`未找到 ID 为 ${targetId} 的 img 标签`);
+
+        }
+        const serializer = new XMLSerializer();
+        const modifiedXml = serializer.serializeToString(xmlDoc);
+        console.log('修改后的 XML:\n', modifiedXml);
+        workbenchStore.setDocuments(modifiedXml)
         workbenchStore.saveCurrentDocument()
       }
       var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
