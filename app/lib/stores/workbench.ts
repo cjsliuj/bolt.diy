@@ -162,6 +162,40 @@ export class WorkbenchStore {
     const document = documents[filePath];
     return document;
   }
+
+  setDocumentContentByFile(newContent: string, filePath:string) {
+    if (!filePath) {
+      return;
+    }
+    const documents = this.#editorStore.documents.get();
+    const document = documents[filePath];
+    if (!document) {
+      return;
+    }
+    const originalContent = this.#filesStore.getFile(filePath)?.content;
+    const unsavedChanges = originalContent !== undefined && originalContent !== newContent;
+
+    this.#editorStore.updateFile(filePath, newContent);
+
+    if (document) {
+      const previousUnsavedFiles = this.unsavedFiles.get();
+
+      if (unsavedChanges && previousUnsavedFiles.has(document.filePath)) {
+        return;
+      }
+
+      const newUnsavedFiles = new Set(previousUnsavedFiles);
+
+      if (unsavedChanges) {
+        newUnsavedFiles.add(document.filePath);
+      } else {
+        newUnsavedFiles.delete(document.filePath);
+      }
+
+      this.unsavedFiles.set(newUnsavedFiles);
+    }
+  }
+
   setCurrentDocumentContent(newContent: string) {
     const filePath = this.currentDocument.get()?.filePath;
 

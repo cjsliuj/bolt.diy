@@ -397,8 +397,8 @@ export const Workbench = memo(
     const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
       const file = e.target.files?.[0];
 
-
-
+      var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
+      fileInput!.value = ""
       // const observer = {
       //   next(res:{}){
       //     console.log("res", res);
@@ -445,6 +445,11 @@ export const Workbench = memo(
       if(iframeReplaceMessageData!.elementTag == "img") {
         // var curContent = workbenchStore.currentDocument.get()!.value!
         var curContent = workbenchStore.getDocumentByFile(iframeReplaceMessageData?.filePath!).value
+        curContent = curContent.replace(
+          new RegExp("<!DOCTYPE html>", "gi"),
+          ""
+        );
+        console.log(curContent)
         const targetId = iframeReplaceMessageData!.elementID!;
         const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
         const elementTag = iframeReplaceMessageData!.elementTag
@@ -462,16 +467,14 @@ export const Workbench = memo(
           imgElement.setAttribute('src', newSrc);
         } else {
           console.warn(`未找到 ID 为 ${targetId} 的 img 标签`);
-
+          return;
         }
         const serializer = new XMLSerializer();
         const modifiedXml = serializer.serializeToString(xmlDoc);
-        console.log('修改后的 XML:\n', modifiedXml);
-        workbenchStore.setDocuments(modifiedXml)
-        workbenchStore.saveCurrentDocument()
+        workbenchStore.setDocumentContentByFile(modifiedXml, iframeReplaceMessageData!.filePath!)
+        workbenchStore.saveFile(iframeReplaceMessageData!.filePath!)
       }
-      var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
-      fileInput!.value = ""
+
     }
     return (
       chatStarted && (
