@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
 import { computed } from 'nanostores';
-import { memo, useCallback, useEffect, useState, useMemo, type ChangeEvent } from 'react';
+import { memo, useCallback, useEffect, useState, useMemo,  useRef, type ChangeEvent } from 'react';
 import { toast } from 'react-toastify';
 import { Popover, Transition } from '@headlessui/react';
 import { diffLines, type Change } from 'diff';
@@ -26,7 +26,7 @@ import useViewport from '~/lib/hooks';
 import { PushToGitHubDialog } from '~/components/@settings/tabs/connections/components/PushToGitHubDialog';
 import * as qiniu from 'qiniu-js';
 import InputTextDialog from '~/components/@settings/tabs/connections/components/InputTextDialog';
-
+import type { IFrameReplaceMessageData } from './IFrameMessage';
 
 import {
   S3Client,
@@ -285,17 +285,10 @@ const FileModifiedDropdown = memo(
     );
   },
 );
-interface IFrameReplaceMessageData {
-  msgType:"replaceImage"|"replaceText",
-  originalString:"", //仅当 msgType == replaceText时有此字段
-  elementTag:"img"|"span",
-  elementID:string,
-  filePath:string
-}
+
 export const Workbench = memo(
   ({ chatStarted, isStreaming, actionRunner, metadata, updateChatMestaData }: WorkspaceProps) => {
     renderLogger.trace('Workbench');
-
     const [isSyncing, setIsSyncing] = useState(false);
     const [isPushDialogOpen, setIsPushDialogOpen] = useState(false);
     const [isInputDialogOpen, setIsInputDialogOpen] = useState(false);
@@ -393,50 +386,30 @@ export const Workbench = memo(
       if (msgType == undefined) {
         return
       }
-      console.log('hadle sub message from iframe:', event.data);
+      console.log('handle sub message from iframe:', event.data);
       setIframeReplaceMessageData(data);
-      if (msgType == "replaceImage") {
-        const input = document.getElementById('imageSelectInput');
-        input?.click();
-      } else if (msgType == "replaceText") {
-        setInpuDialogDefaultValue(data?.originalString!)
-        console.log("originalString:",data?.originalString!)
-        setIsInputDialogOpen(true)
+
+      if (msgType == "edit"){
+        const textTags:Array<string> = ["p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"]
+        if (data.tagName.toLowerCase() == "img") {
+          const input = document.getElementById('imageSelectInput');
+          input?.click();
+        } else if (textTags.includes(data.tagName.toLowerCase())) {
+          setInpuDialogDefaultValue(data!.textContent)
+          setIsInputDialogOpen(true)
+        }
+      } else if (msgType == "requestEditMode") {
+
       }
     };
     const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
       const file = e.target.files?.[0];
-
       var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
       fileInput!.value = ""
-      // const observer = {
-      //   next(res:{}){
-      //     console.log("res", res);
-      //   },
-      //   error(err:{}){
-      //     console.log("err:",err);
-      //   },
-      //   complete(res:{"key":string}){
-      //     console.log("complete:", res["key"])
-      //     const url = "http://sup0juump.hd-bkt.clouddn.com/" + res["key"]
-      //     if(iframeReplaceMessageData!.elementType == "img") {
-      //       var curContent = workbenchStore.currentDocument.get()!.value!
-      //       curContent = curContent.replace("test.svg",url)
-      //       console.log(curContent)
-      //       workbenchStore.setCurrentDocumentContent(curContent)
-      //       workbenchStore.saveCurrentDocument()
-      //     }
-      //
-      //   }
-      // }
-      // const token = "VDP1TMdmEwEwANypomnZP-eVyNCCuKWU2zK4pGle:TlxOBZrlDdjeVIWaz-6kWgSBqRE=:eyJzY29wZSI6ImFpeWFyZCIsInJldHVybkJvZHkiOiJ7XCJrZXlcIjpcIiQoa2V5KVwiLFwiaGFzaFwiOlwiJChldGFnKVwiLFwiZnNpemVcIjokKGZzaXplKSxcImJ1Y2tldFwiOlwiJChidWNrZXQpXCIsXCJuYW1lXCI6XCIkKHg6bmFtZSlcIn0iLCJkZWFkbGluZSI6MTc0NTQ5NTY1M30="
-      // const observable = qiniu.upload(file!, null, token, {}, { });
-      // const subscription = observable.subscribe(observer)
-
       const fileBuffer = await fileToUint8Array(file!);
       const fname = Date.now().toString();
       const input = { // ListBucketsRequest
-        Bucket:"mytest",
+        Bucket:import.meta.env.VITE_BUCKET,
         Key:fname,
         Body:fileBuffer,
         ContentType:"image/png",
@@ -451,72 +424,34 @@ export const Workbench = memo(
       });
       const command = new PutObjectCommand(input);
       const response = await S3.send(command);
-      console.log(iframeReplaceMessageData)
-      if(iframeReplaceMessageData!.elementTag == "img") {
-        // var curContent = workbenchStore.currentDocument.get()!.value!
-        var curContent = workbenchStore.getDocumentByFile(iframeReplaceMessageData?.filePath!).value
-        curContent = curContent.replace(
-          new RegExp("<!DOCTYPE html>", "gi"),
-          ""
-        );
-        console.log(curContent)
-        const targetId = iframeReplaceMessageData!.elementID!;
-        const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
-        const elementTag = iframeReplaceMessageData!.elementTag
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(curContent, 'text/xml');
-        const nodes = xmlDoc.evaluate(
-          `//${elementTag}[@id='${targetId}']`,
-          xmlDoc,
-          null, // 无命名空间
-          XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-          null
-        );
-        if (nodes.snapshotLength > 0) {
-          const imgElement = nodes.snapshotItem(0) as HTMLImageElement;
-          imgElement.setAttribute('src', newSrc);
-        } else {
-          console.warn(`未找到 ID 为 ${targetId} 的 img 标签`);
-          return;
-        }
-        const serializer = new XMLSerializer();
-        const modifiedXml = serializer.serializeToString(xmlDoc);
-        workbenchStore.setDocumentContentByFile(modifiedXml, iframeReplaceMessageData!.filePath!)
-        workbenchStore.saveFile(iframeReplaceMessageData!.filePath!)
-      }
+      const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
+      var docContent = workbenchStore.getDocumentByFile(docFilePath).value
 
+      const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
+      var rawImgHTMLStr = iframeReplaceMessageData!.outerHTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = rawImgHTMLStr;
+      const imgElement:HTMLImageElement = tempDiv.querySelector('img')!;
+      imgElement.src = newSrc;
+      const newImgHTMLStr = imgElement.outerHTML
+      docContent = docContent.replace(rawImgHTMLStr, newImgHTMLStr)
+      workbenchStore.setDocumentContentByFile(docContent, docFilePath)
+      workbenchStore.saveFile(docFilePath)
     }
 
     function onInputDialogConfirm(newContent: string): void {
       setIsInputDialogOpen(false)
-      var curContent = workbenchStore.getDocumentByFile(iframeReplaceMessageData?.filePath!).value
-      curContent = curContent.replace(
-        new RegExp("<!DOCTYPE html>", "gi"),
-        ""
-      );
-      const targetId = iframeReplaceMessageData!.elementID!;
-      const elementTag = iframeReplaceMessageData!.elementTag
+      const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
+      var docContent = workbenchStore.getDocumentByFile(docFilePath).value
+      var rawHTMLStr = iframeReplaceMessageData!.outerHTML
+      const newHTMLStr = rawHTMLStr.replace(iframeReplaceMessageData!.textContent, newContent)
+      docContent = docContent.replace(rawHTMLStr, newHTMLStr)
+      workbenchStore.setDocumentContentByFile(docContent, docFilePath)
+      workbenchStore.saveFile(docFilePath)
+    }
 
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(curContent, 'text/xml');
-      const nodes = xmlDoc.evaluate(
-        `//${elementTag}[@id='${targetId}'][1]`,
-        xmlDoc,
-        null, // 无命名空间
-        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-        null
-      );
-      if (nodes.snapshotLength <= 0) {
-        console.warn(`未找到 ID 为 ${targetId} 的 img 标签`);
-        return;
-      }
-      const ele = nodes.snapshotItem(0) as HTMLElement;
-      ele.textContent = newContent;
+    function toggleEditMode(isEditMode: boolean){
 
-      const serializer = new XMLSerializer();
-      const modifiedXml = serializer.serializeToString(xmlDoc);
-      workbenchStore.setDocumentContentByFile(modifiedXml, iframeReplaceMessageData!.filePath!)
-      workbenchStore.saveFile(iframeReplaceMessageData!.filePath!)
     }
 
     return (
@@ -578,14 +513,14 @@ export const Workbench = memo(
                   {selectedView === 'diff' && (
                     <FileModifiedDropdown fileHistory={fileHistory} onSelectFile={handleSelectFile} />
                   )}
-                  <IconButton
-                    icon="i-ph:x-circle"
-                    className="-mr-1"
-                    size="xl"
-                    onClick={() => {
-                      workbenchStore.showWorkbench.set(false);
-                    }}
-                  />
+                  {/*<IconButton*/}
+                  {/*  icon="i-ph:x-circle"*/}
+                  {/*  className="-mr-1"*/}
+                  {/*  size="xl"*/}
+                  {/*  onClick={() => {*/}
+                  {/*    workbenchStore.showWorkbench.set(false);*/}
+                  {/*  }}*/}
+                  {/*/>*/}
                 </div>
                 <div className="relative flex-1 overflow-hidden">
                   <View initial={{ x: '0%' }} animate={{ x: selectedView === 'code' ? '0%' : '-100%' }}>
@@ -610,7 +545,7 @@ export const Workbench = memo(
                     <DiffView fileHistory={fileHistory} setFileHistory={setFileHistory} actionRunner={actionRunner} />
                   </View>
                   <View initial={{ x: '100%' }} animate={{ x: selectedView === 'preview' ? '0%' : '100%' }}>
-                    <Preview />
+                    <Preview  onToggleEditMode={toggleEditMode}/>
                   </View>
                 </div>
               </div>

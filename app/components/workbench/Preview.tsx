@@ -5,6 +5,7 @@ import { workbenchStore } from '~/lib/stores/workbench';
 import { PortDropdown } from './PortDropdown';
 import { ScreenshotSelector } from './ScreenshotSelector';
 import { useTranslation } from 'react-i18next';
+import type {IFrameReplaceMessageData} from './IFrameMessage'
 
 type ResizeSide = 'left' | 'right' | null;
 
@@ -45,8 +46,12 @@ const WINDOW_SIZES: WindowSize[] = [
   { name: 'Desktop', width: 1920, height: 1080, icon: 'i-ph:monitor', hasFrame: true, frameType: 'desktop' },
   { name: '4K Display', width: 3840, height: 2160, icon: 'i-ph:monitor', hasFrame: true, frameType: 'desktop' },
 ];
+interface PreviewDialogProps {
 
-export const Preview = memo(() => {
+  onToggleEditMode?: (isEditMode: boolean) => void;
+
+}
+export const Preview = memo((props: PreviewDialogProps) => {
   const { t } = useTranslation('common');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,7 +71,8 @@ export const Preview = memo(() => {
 
   // Toggle between responsive mode and device mode
   const [isDeviceModeOn, setIsDeviceModeOn] = useState(false);
-
+  const [isEditModeOn, setIsEditModeOn] = useState(false);
+  const isEditModeOnRef = useRef(isEditModeOn);
   // Use percentage for width
   const [widthPercent, setWidthPercent] = useState<number>(37.5);
   const [currentWidth, setCurrentWidth] = useState<number>(0);
@@ -163,6 +169,38 @@ export const Preview = memo(() => {
 
   const toggleDeviceMode = () => {
     setIsDeviceModeOn((prev) => !prev);
+  };
+
+  useEffect(() => {
+    if (props.onToggleEditMode) {
+      props.onToggleEditMode(isEditModeOn);
+    }
+    if (iframeRef.current) {
+      iframeRef.current.contentWindow!.postMessage({ msgType: 'toggleEditMode', isEditModeOn:isEditModeOn }, '*');
+    }
+    isEditModeOnRef.current = isEditModeOn;
+  }, [isEditModeOn]);
+
+  useEffect(() => {
+    window.addEventListener('message', handleIFrameMessage);
+    return () => {
+      window.removeEventListener('message', handleIFrameMessage);
+    };
+  }, []);
+
+
+  const handleIFrameMessage = (event:any) => {
+    const data = event.data as IFrameReplaceMessageData
+    const msgType = data.msgType
+    if (msgType == "requestEditMode") {
+      if (iframeRef.current) {
+        iframeRef.current.contentWindow!.postMessage({ msgType: 'toggleEditMode', isEditModeOn:isEditModeOnRef.current }, '*');
+      }
+    }
+  }
+
+  const toggleEditMode = () => {
+    setIsEditModeOn((prev) => !prev);
   };
 
   const startResizing = (e: React.PointerEvent, side: ResizeSide) => {
@@ -473,11 +511,11 @@ export const Preview = memo(() => {
                   overflow: hidden;
                   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 }
-                
+
                 .device-container {
                   position: relative;
                 }
-                
+
                 .device-name {
                   position: absolute;
                   top: -30px;
@@ -487,7 +525,7 @@ export const Preview = memo(() => {
                   font-size: 14px;
                   color: #333;
                 }
-                
+
                 .device-frame {
                   position: relative;
                   border-radius: ${frameRadius};
@@ -496,7 +534,7 @@ export const Preview = memo(() => {
                   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
                   overflow: hidden;
                 }
-                
+
                 /* Notch */
                 .device-frame:before {
                   content: '';
@@ -510,7 +548,7 @@ export const Preview = memo(() => {
                   border-radius: 4px;
                   z-index: 2;
                 }
-                
+
                 /* Home button */
                 .device-frame:after {
                   content: '';
@@ -524,7 +562,7 @@ export const Preview = memo(() => {
                   border-radius: 50%;
                   z-index: 2;
                 }
-                
+
                 iframe {
                   border: none;
                   width: ${width}px;
@@ -639,11 +677,11 @@ export const Preview = memo(() => {
       <div className="bg-bolt-elements-background-depth-2 p-2 flex items-center gap-2">
         <div className="flex items-center gap-2">
           <IconButton icon="i-ph:arrow-clockwise" onClick={reloadPreview} />
-          <IconButton
-            icon="i-ph:selection"
-            onClick={() => setIsSelectionMode(!isSelectionMode)}
-            className={isSelectionMode ? 'bg-bolt-elements-background-depth-3' : ''}
-          />
+          {/*<IconButton*/}
+          {/*  icon="i-ph:selection"*/}
+          {/*  onClick={() => setIsSelectionMode(!isSelectionMode)}*/}
+          {/*  className={isSelectionMode ? 'bg-bolt-elements-background-depth-3' : ''}*/}
+          {/*/>*/}
         </div>
 
         <div className="flex-grow flex items-center gap-1 bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-3 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive">
@@ -680,51 +718,57 @@ export const Preview = memo(() => {
             />
           )}
 
-          <IconButton
-            icon="i-ph:devices"
-            onClick={toggleDeviceMode}
-            title={isDeviceModeOn ? 'Switch to Responsive Mode' : 'Switch to Device Mode'}
-          />
-
-          {isDeviceModeOn && (
-            <>
-              <IconButton
-                icon="i-ph:rotate-right"
-                onClick={() => setIsLandscape(!isLandscape)}
-                title={isLandscape ? 'Switch to Portrait' : 'Switch to Landscape'}
-              />
-              <IconButton
-                icon={showDeviceFrameInPreview ? 'i-ph:device-mobile' : 'i-ph:device-mobile-slash'}
-                onClick={() => setShowDeviceFrameInPreview(!showDeviceFrameInPreview)}
-                title={showDeviceFrameInPreview ? 'Hide Device Frame' : 'Show Device Frame'}
-              />
-            </>
-          )}
+          {/*<IconButton*/}
+          {/*  icon="i-ph:devices"*/}
+          {/*  onClick={toggleDeviceMode}*/}
+          {/*  title={isDeviceModeOn ? 'Switch to Responsive Mode' : 'Switch to Device Mode'}*/}
+          {/*/>*/}
 
           <IconButton
-            icon="i-ph:layout-light"
-            onClick={() => setIsPreviewOnly(!isPreviewOnly)}
-            title={isPreviewOnly ? 'Show Full Interface' : 'Show Preview Only'}
+            icon={isEditModeOn ? 'i-ph:note-pencil-thin' : 'i-ph:eye-light'}
+            onClick={toggleEditMode}
+            title={isEditModeOn ? '切换到预览模式':'切换到编辑模式'}
           />
 
-          <IconButton
-            icon={isFullscreen ? 'i-ph:arrows-in' : 'i-ph:arrows-out'}
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
-          />
+          {/*{isDeviceModeOn && (*/}
+          {/*  <>*/}
+          {/*    <IconButton*/}
+          {/*      icon="i-ph:rotate-right"*/}
+          {/*      onClick={() => setIsLandscape(!isLandscape)}*/}
+          {/*      title={isLandscape ? 'Switch to Portrait' : 'Switch to Landscape'}*/}
+          {/*    />*/}
+          {/*    <IconButton*/}
+          {/*      icon={showDeviceFrameInPreview ? 'i-ph:device-mobile' : 'i-ph:device-mobile-slash'}*/}
+          {/*      onClick={() => setShowDeviceFrameInPreview(!showDeviceFrameInPreview)}*/}
+          {/*      title={showDeviceFrameInPreview ? 'Hide Device Frame' : 'Show Device Frame'}*/}
+          {/*    />*/}
+          {/*  </>*/}
+          {/*)}*/}
+
+          {/*<IconButton*/}
+          {/*  icon="i-ph:layout-light"*/}
+          {/*  onClick={() => setIsPreviewOnly(!isPreviewOnly)}*/}
+          {/*  title={isPreviewOnly ? 'Show Full Interface' : 'Show Preview Only'}*/}
+          {/*/>*/}
+
+          {/*<IconButton*/}
+          {/*  icon={isFullscreen ? 'i-ph:arrows-in' : 'i-ph:arrows-out'}*/}
+          {/*  onClick={toggleFullscreen}*/}
+          {/*  title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}*/}
+          {/*/>*/}
 
           <div className="flex items-center relative">
-            <IconButton
-              icon="i-ph:arrow-square-out"
-              onClick={() => openInNewWindow(selectedWindowSize)}
-              title={`Open Preview in ${selectedWindowSize.name} Window`}
-            />
-            <IconButton
-              icon="i-ph:caret-down"
-              onClick={() => setIsWindowSizeDropdownOpen(!isWindowSizeDropdownOpen)}
-              className="ml-1"
-              title="Select Window Size"
-            />
+            {/*<IconButton*/}
+            {/*  icon="i-ph:arrow-square-out"*/}
+            {/*  onClick={() => openInNewWindow(selectedWindowSize)}*/}
+            {/*  title={`Open Preview in ${selectedWindowSize.name} Window`}*/}
+            {/*/>*/}
+            {/*<IconButton*/}
+            {/*  icon="i-ph:caret-down"*/}
+            {/*  onClick={() => setIsWindowSizeDropdownOpen(!isWindowSizeDropdownOpen)}*/}
+            {/*  className="ml-1"*/}
+            {/*  title="Select Window Size"*/}
+            {/*/>*/}
 
             {isWindowSizeDropdownOpen && (
               <>
