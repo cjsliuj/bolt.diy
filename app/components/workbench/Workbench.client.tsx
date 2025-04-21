@@ -382,72 +382,87 @@ export const Workbench = memo(
     }
     const handleIFrameMessage = (event:any) => {
       const data = event.data as IFrameReplaceMessageData
+      console.log(data)
       const msgType = data["msgType"]
       if (msgType == undefined) {
         return
       }
-      console.log('handle sub message from iframe:', event.data);
-      setIframeReplaceMessageData(data);
-
-      if (msgType == "edit"){
-        const textTags:Array<string> = ["p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"]
-        if (data.tagName.toLowerCase() == "img") {
-          const input = document.getElementById('imageSelectInput');
-          input?.click();
-        } else if (textTags.includes(data.tagName.toLowerCase())) {
-          setInpuDialogDefaultValue(data!.textContent)
-          setIsInputDialogOpen(true)
-        }
-      } else if (msgType == "requestEditMode") {
-
+      if (msgType == "save") {
+        const newBodyInnerHTML = data.bodyInnerHTML;
+        const docFilePath = "/home/project" + new URL(data.baseURI).pathname;
+        var docContent = workbenchStore.getDocumentByFile(docFilePath).value
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(docContent, "text/html");
+        const bodyElement = xmlDoc.getElementsByTagName("body")[0];
+          bodyElement.innerHTML = newBodyInnerHTML;
+          console.log(bodyElement)
+        const serializer = new XMLSerializer();
+        docContent = serializer.serializeToString(xmlDoc);
+        workbenchStore.setDocumentContentByFile(docContent, docFilePath)
+        workbenchStore.saveFile(docFilePath)
       }
+      // console.log('handle sub message from iframe:', event.data);
+      // setIframeReplaceMessageData(data);
+      //
+      // if (msgType == "edit"){
+      //   const textTags:Array<string> = ["p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"]
+      //   if (data.tagName.toLowerCase() == "img") {
+      //     const input = document.getElementById('imageSelectInput');
+      //     input?.click();
+      //   } else if (textTags.includes(data.tagName.toLowerCase())) {
+      //     setInpuDialogDefaultValue(data!.textContent)
+      //     setIsInputDialogOpen(true)
+      //   }
+      // } else if (msgType == "requestEditMode") {
+      //
+      // }
     };
     const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
-      const file = e.target.files?.[0];
-      var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
-      fileInput!.value = ""
-      const fileBuffer = await fileToUint8Array(file!);
-      const fname = Date.now().toString();
-      const input = { // ListBucketsRequest
-        Bucket:import.meta.env.VITE_BUCKET,
-        Key:fname,
-        Body:fileBuffer,
-        ContentType:"image/png",
-      };
-      const S3 = new S3Client({
-        region: "auto",
-        endpoint: import.meta.env.VITE_CLOUDFLARE_ENDPOINT,
-        credentials: {
-          accessKeyId: import.meta.env.VITE_CLOUDFLARE_ACCESSKEY_ID,
-          secretAccessKey: import.meta.env.VITE_CLOUDFLARE_SECRET_ACCESSKEY,
-        },
-      });
-      const command = new PutObjectCommand(input);
-      const response = await S3.send(command);
-      const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
-      var docContent = workbenchStore.getDocumentByFile(docFilePath).value
-
-      const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
-      var rawImgHTMLStr = iframeReplaceMessageData!.outerHTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = rawImgHTMLStr;
-      const imgElement:HTMLImageElement = tempDiv.querySelector('img')!;
-      imgElement.src = newSrc;
-      const newImgHTMLStr = imgElement.outerHTML
-      docContent = docContent.replace(rawImgHTMLStr, newImgHTMLStr)
-      workbenchStore.setDocumentContentByFile(docContent, docFilePath)
-      workbenchStore.saveFile(docFilePath)
+      // const file = e.target.files?.[0];
+      // var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
+      // fileInput!.value = ""
+      // const fileBuffer = await fileToUint8Array(file!);
+      // const fname = Date.now().toString();
+      // const input = { // ListBucketsRequest
+      //   Bucket:import.meta.env.VITE_BUCKET,
+      //   Key:fname,
+      //   Body:fileBuffer,
+      //   ContentType:"image/png",
+      // };
+      // const S3 = new S3Client({
+      //   region: "auto",
+      //   endpoint: import.meta.env.VITE_CLOUDFLARE_ENDPOINT,
+      //   credentials: {
+      //     accessKeyId: import.meta.env.VITE_CLOUDFLARE_ACCESSKEY_ID,
+      //     secretAccessKey: import.meta.env.VITE_CLOUDFLARE_SECRET_ACCESSKEY,
+      //   },
+      // });
+      // const command = new PutObjectCommand(input);
+      // const response = await S3.send(command);
+      // const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
+      // var docContent = workbenchStore.getDocumentByFile(docFilePath).value
+      //
+      // const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
+      // var rawImgHTMLStr = iframeReplaceMessageData!.outerHTML
+      // const tempDiv = document.createElement('div');
+      // tempDiv.innerHTML = rawImgHTMLStr;
+      // const imgElement:HTMLImageElement = tempDiv.querySelector('img')!;
+      // imgElement.src = newSrc;
+      // const newImgHTMLStr = imgElement.outerHTML
+      // docContent = docContent.replace(rawImgHTMLStr, newImgHTMLStr)
+      // workbenchStore.setDocumentContentByFile(docContent, docFilePath)
+      // workbenchStore.saveFile(docFilePath)
     }
 
     function onInputDialogConfirm(newContent: string): void {
-      setIsInputDialogOpen(false)
-      const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
-      var docContent = workbenchStore.getDocumentByFile(docFilePath).value
-      var rawHTMLStr = iframeReplaceMessageData!.outerHTML
-      const newHTMLStr = rawHTMLStr.replace(iframeReplaceMessageData!.textContent, newContent)
-      docContent = docContent.replace(rawHTMLStr, newHTMLStr)
-      workbenchStore.setDocumentContentByFile(docContent, docFilePath)
-      workbenchStore.saveFile(docFilePath)
+      // setIsInputDialogOpen(false)
+      // const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
+      // var docContent = workbenchStore.getDocumentByFile(docFilePath).value
+      // var rawHTMLStr = iframeReplaceMessageData!.outerHTML
+      // const newHTMLStr = rawHTMLStr.replace(iframeReplaceMessageData!.textContent, newContent)
+      // docContent = docContent.replace(rawHTMLStr, newHTMLStr)
+      // workbenchStore.setDocumentContentByFile(docContent, docFilePath)
+      // workbenchStore.saveFile(docFilePath)
     }
 
     function toggleEditMode(isEditMode: boolean){

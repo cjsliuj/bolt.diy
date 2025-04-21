@@ -176,7 +176,7 @@ export const Preview = memo((props: PreviewDialogProps) => {
       props.onToggleEditMode(isEditModeOn);
     }
     if (iframeRef.current) {
-      iframeRef.current.contentWindow!.postMessage({ msgType: 'toggleEditMode', isEditModeOn:isEditModeOn }, '*');
+      iframeRef.current.contentWindow!.postMessage({ msgType: 'switchMode', dstModeType:isEditModeOn ? 2:0 }, '*');
     }
     isEditModeOnRef.current = isEditModeOn;
   }, [isEditModeOn]);
@@ -192,10 +192,12 @@ export const Preview = memo((props: PreviewDialogProps) => {
   const handleIFrameMessage = (event:any) => {
     const data = event.data as IFrameReplaceMessageData
     const msgType = data.msgType
-    if (msgType == "requestEditMode") {
+    if (msgType === "requestEditMode") {
       if (iframeRef.current) {
-        iframeRef.current.contentWindow!.postMessage({ msgType: 'toggleEditMode', isEditModeOn:isEditModeOnRef.current }, '*');
+        iframeRef.current.contentWindow!.postMessage({ msgType: 'switchMode', dstModeType:isEditModeOnRef.current ? 2:0}, '*');
       }
+    } else if (msgType === "save") {
+      setIsEditModeOn(false);
     }
   }
 
