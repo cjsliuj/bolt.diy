@@ -19,7 +19,6 @@ export const IGNORE_PATTERNS = [
   '**/*.DS_Store',
   '**/.gitignore',
   'templatesArchives/**',
-  'package-lock.json',
   'tsconfig.json',
   'tsconfig.app.json',
   'tsconfig.node.json',
