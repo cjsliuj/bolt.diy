@@ -18,7 +18,13 @@ export const IGNORE_PATTERNS = [
   '**/yarn-error.log*',
   '**/*.DS_Store',
   '**/.gitignore',
-  'templatesArchives/**'
+  'templatesArchives/**',
+  'package-lock.json',
+  'tsconfig.json',
+  'tsconfig.app.json',
+  'tsconfig.node.json',
+  'eslint.config.js',
+  'src/editor/test-workground.js'
 ];
 
 export const MAX_FILES = 1000;
