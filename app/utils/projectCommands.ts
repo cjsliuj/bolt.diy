@@ -34,7 +34,7 @@ export async function detectProjectCommands(files: FileContent[]): Promise<Proje
       if (availableCommand) {
         return {
           type: 'Node.js',
-          setupCommand: `npm install`,
+          setupCommand: `npm config set registry https://registry.npmmirror.com;npm install`,
           startCommand: `npm run ${availableCommand}`,
           followupMessage: `Found "${availableCommand}" script in package.json. Running "npm run ${availableCommand}" after installation.`,
         };
@@ -42,7 +42,7 @@ export async function detectProjectCommands(files: FileContent[]): Promise<Proje
 
       return {
         type: 'Node.js',
-        setupCommand: 'npm install',
+        setupCommand: 'npm config set registry https://registry.npmmirror.com;npm install',
         followupMessage:
           'Would you like me to inspect package.json to determine the available scripts for running this project?',
       };
