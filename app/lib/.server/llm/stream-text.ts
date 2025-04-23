@@ -185,7 +185,9 @@ ${props.summary}
               // Default fallback for unknown formats
               return { type: 'text', text: String(item || '') };
             })
-          : [{ type: 'text', text: typeof msg.content === 'string' ? msg.content : String(msg.content || '') }],
+            : [{ type: 'text', text: typeof msg.content === 'string' 
+              ? msg.content.replace(/<boltAction[^>]*filePath="[^"]*package-lock\.json[^"]*"[^>]*>[\s\S]*?<\/boltAction>/g, '') 
+              : String(msg.content || '') }],
       }));
 
       return await _streamText({

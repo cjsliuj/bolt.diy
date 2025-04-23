@@ -34,5 +34,6 @@ export const IGNORE_PATTERNS = [
   '**/yarn-debug.log*',
   '**/yarn-error.log*',
   '**/*lock.json',
+  '**/editor/**',
   '**/*lock.yml',
 ];
