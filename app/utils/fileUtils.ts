@@ -18,7 +18,8 @@ export const IGNORE_PATTERNS = [
   '**/yarn-error.log*',
   '**/*.DS_Store',
   '**/.gitignore',
-  'templatesArchives/**'
+  'templatesArchives/**',
+  'src/editor/test-workground.js'
 ];
 
 export const MAX_FILES = 1000;
