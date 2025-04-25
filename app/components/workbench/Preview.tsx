@@ -49,7 +49,7 @@ const WINDOW_SIZES: WindowSize[] = [
 interface PreviewDialogProps {
 
   onToggleEditMode?: (isEditMode: boolean) => void;
-
+  editorSelectedFile: string | undefined;
 }
 export const Preview = memo((props: PreviewDialogProps) => {
   const { t } = useTranslation('common');
@@ -96,16 +96,27 @@ export const Preview = memo((props: PreviewDialogProps) => {
   const [showDeviceFrameInPreview, setShowDeviceFrameInPreview] = useState(false);
 
   useEffect(() => {
+    if (props.editorSelectedFile === undefined) {
+      return;
+    }
+    if (!props.editorSelectedFile.toLowerCase().endsWith("html")) {
+      return;
+    }
+    const path = props.editorSelectedFile.replace("/home/project/public", "");
+    const preiwUrl = url + path;
+    setIframeUrl(preiwUrl);
+  }, [props.editorSelectedFile]);
+  useEffect(() => {
     if (!activePreview) {
       setUrl('');
       setIframeUrl(undefined);
-
       return;
     }
 
     const { baseUrl } = activePreview;
     setUrl(baseUrl);
     setIframeUrl(baseUrl);
+    console.log("baseUrl:",baseUrl)
   }, [activePreview]);
 
   const validateUrl = useCallback(

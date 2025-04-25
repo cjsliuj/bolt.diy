@@ -296,7 +296,7 @@ export const Workbench = memo(
     const [fileHistory, setFileHistory] = useState<Record<string, FileHistory>>({});
     const [iframeReplaceMessageData, setIframeReplaceMessageData] = useState<IFrameReplaceMessageData>();
     // const modifiedFiles = Array.from(useStore(workbenchStore.unsavedFiles).keys());
-
+    const [editorSelectedFile, setEditorSelectedFile] = useState<string|undefined>("");
     const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
     const showWorkbench = useStore(workbenchStore.showWorkbench);
     const selectedFile = useStore(workbenchStore.selectedFile);
@@ -338,6 +338,7 @@ export const Workbench = memo(
 
     const onFileSelect = useCallback((filePath: string | undefined) => {
       workbenchStore.setSelectedFile(filePath);
+      setEditorSelectedFile(filePath);
     }, []);
 
     const onFileSave = useCallback(() => {
@@ -560,7 +561,7 @@ export const Workbench = memo(
                     <DiffView fileHistory={fileHistory} setFileHistory={setFileHistory} actionRunner={actionRunner} />
                   </View>
                   <View initial={{ x: '100%' }} animate={{ x: selectedView === 'preview' ? '0%' : '100%' }}>
-                    <Preview  onToggleEditMode={toggleEditMode}/>
+                    <Preview  onToggleEditMode={toggleEditMode} editorSelectedFile={editorSelectedFile}/>
                   </View>
                 </div>
               </div>

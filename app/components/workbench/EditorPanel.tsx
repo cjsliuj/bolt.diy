@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import {
   CodeMirrorEditor,
@@ -14,7 +14,7 @@ import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
 import type { FileMap } from '~/lib/stores/files';
 import type { FileHistory } from '~/types/actions';
 import { themeStore } from '~/lib/stores/theme';
-import { WORK_DIR } from '~/utils/constants';
+import { EDITOR_FILE_TREE_ROOT_DIR } from '~/utils/constants';
 import { renderLogger } from '~/utils/logger';
 import { isMobile } from '~/utils/mobile';
 import { FileBreadcrumb } from './FileBreadcrumb';
@@ -58,7 +58,7 @@ export const EditorPanel = memo(
 
     const theme = useStore(themeStore);
     const showTerminal = useStore(workbenchStore.showTerminal);
-
+    const [htmlFiles, setHtmlFiles] = useState<FileMap>();
     const activeFileSegments = useMemo(() => {
       if (!editorDocument) {
         return undefined;
@@ -70,7 +70,24 @@ export const EditorPanel = memo(
     const activeFileUnsaved = useMemo(() => {
       return editorDocument !== undefined && unsavedFiles?.has(editorDocument.filePath);
     }, [editorDocument, unsavedFiles]);
-
+    useEffect(() => {
+      if (files === undefined) {
+        return;
+      }
+      const newHtmlFiles:FileMap = {}
+      for (const key in files) {
+        if (Object.prototype.hasOwnProperty.call(files, key)) {
+          const filePath = key;
+          const fileInfo = files[key];
+          console.log(filePath)
+          if (filePath.toLowerCase().startsWith("/home/project/public") && filePath.toLowerCase().endsWith(".html")) {
+            newHtmlFiles[filePath] = fileInfo;
+          }
+          console.log("filePath:",filePath);
+        }
+      }
+      setHtmlFiles(newHtmlFiles)
+    }, [files]);
     return (
       <PanelGroup direction="vertical">
         <Panel defaultSize={showTerminal ? DEFAULT_EDITOR_SIZE : 100} minSize={20}>
@@ -83,11 +100,11 @@ export const EditorPanel = memo(
                 </PanelHeader>
                 <FileTree
                   className="h-full"
-                  files={files}
+                  files={htmlFiles}
                   hideRoot
                   unsavedFiles={unsavedFiles}
                   fileHistory={fileHistory}
-                  rootFolder={WORK_DIR}
+                  rootFolder={EDITOR_FILE_TREE_ROOT_DIR}
                   selectedFile={selectedFile}
                   onFileSelect={onFileSelect}
                 />
@@ -98,7 +115,7 @@ export const EditorPanel = memo(
               <PanelHeader className="overflow-x-auto">
                 {activeFileSegments?.length && (
                   <div className="flex items-center flex-1 text-sm">
-                    <FileBreadcrumb pathSegments={activeFileSegments} files={files} onFileSelect={onFileSelect} />
+                    <FileBreadcrumb pathSegments={activeFileSegments} files={htmlFiles} onFileSelect={onFileSelect} />
                     {activeFileUnsaved && (
                       <div className="flex gap-1 ml-auto -mr-1.5">
                         <PanelHeaderButton onClick={onFileSave}>
