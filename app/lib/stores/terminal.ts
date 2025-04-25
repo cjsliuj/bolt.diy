@@ -25,6 +25,7 @@ export class TerminalStore {
   toggleTerminal(value?: boolean) {
     this.showTerminal.set(value !== undefined ? value : !this.showTerminal.get());
   }
+
   async attachBoltTerminal(terminal: ITerminal) {
     try {
       const wc = await this.#webcontainer;

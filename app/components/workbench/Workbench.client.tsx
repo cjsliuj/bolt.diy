@@ -41,15 +41,15 @@ const viewTransition = { ease: cubicEasingFn };
 const sliderOptions: SliderOptions<WorkbenchViewType> = {
   left: {
     value: 'code',
-    text: 'Code',
+    text: '文件',
   },
-  middle: {
-    value: 'diff',
-    text: 'Diff',
-  },
+  // middle: {
+  //   value: 'diff',
+  //   text: 'Diff',
+  // },
   right: {
     value: 'preview',
-    text: 'Preview',
+    text: '预览',
   },
 };
 
@@ -301,10 +301,13 @@ export const Workbench = memo(
       workbenchStore.currentView.set(view);
     };
     useEffect(() => {
+      workbenchStore.toggleTerminal(false);
+
       window.addEventListener('message', handleIFrameMessage);
       return () => {
         window.removeEventListener('message', handleIFrameMessage);
       };
+
     }, []);
 
 
@@ -329,6 +332,7 @@ export const Workbench = memo(
     const onFileSelect = useCallback((filePath: string | undefined) => {
       workbenchStore.setSelectedFile(filePath);
       setEditorSelectedFile(filePath);
+      setSelectedView('preview')
     }, []);
 
     const onFileSave = useCallback(() => {
@@ -429,25 +433,25 @@ export const Workbench = memo(
                         }}
                       >
                         <div className="i-ph:code" />
-                        Download Code
+                        下载模板文件
                       </PanelHeaderButton>
-                      <PanelHeaderButton className="mr-1 text-sm" onClick={handleSyncFiles} disabled={isSyncing}>
-                        {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:cloud-arrow-down" />}
-                        {isSyncing ? 'Syncing...' : 'Sync Files'}
-                      </PanelHeaderButton>
-                      <PanelHeaderButton
-                        className="mr-1 text-sm"
-                        onClick={() => {
-                          workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                        }}
-                      >
-                        <div className="i-ph:terminal" />
-                        Toggle Terminal
-                      </PanelHeaderButton>
-                      <PanelHeaderButton className="mr-1 text-sm" onClick={() => setIsPushDialogOpen(true)}>
-                        <div className="i-ph:git-branch" />
-                        Push to GitHub
-                      </PanelHeaderButton>
+                      {/*<PanelHeaderButton className="mr-1 text-sm" onClick={handleSyncFiles} disabled={isSyncing}>*/}
+                      {/*  {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:cloud-arrow-down" />}*/}
+                      {/*  {isSyncing ? 'Syncing...' : 'Sync Files'}*/}
+                      {/*</PanelHeaderButton>*/}
+                      {/*<PanelHeaderButton*/}
+                      {/*  className="mr-1 text-sm"*/}
+                      {/*  onClick={() => {*/}
+                      {/*    workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());*/}
+                      {/*  }}*/}
+                      {/*>*/}
+                      {/*  <div className="i-ph:terminal" />*/}
+                      {/*  Toggle Terminal*/}
+                      {/*</PanelHeaderButton>*/}
+                      {/*<PanelHeaderButton className="mr-1 text-sm" onClick={() => setIsPushDialogOpen(true)}>*/}
+                      {/*  <div className="i-ph:git-branch" />*/}
+                      {/*  Push to GitHub*/}
+                      {/*</PanelHeaderButton>*/}
                     </div>
                   )}
                   {selectedView === 'diff' && (
