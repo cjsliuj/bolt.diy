@@ -116,7 +116,6 @@ export const Preview = memo((props: PreviewDialogProps) => {
     const { baseUrl } = activePreview;
     setUrl(baseUrl);
     setIframeUrl(baseUrl);
-    console.log("baseUrl:",baseUrl)
   }, [activePreview]);
 
   const validateUrl = useCallback(

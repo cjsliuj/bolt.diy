@@ -24,17 +24,7 @@ import { EditorPanel } from './EditorPanel';
 import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
 import { PushToGitHubDialog } from '~/components/@settings/tabs/connections/components/PushToGitHubDialog';
-import * as qiniu from 'qiniu-js';
-import InputTextDialog from '~/components/@settings/tabs/connections/components/InputTextDialog';
 import type { IFrameReplaceMessageData } from './IFrameMessage';
-
-import {
-  S3Client,
-  ListBucketsCommand,
-  ListObjectsV2Command,
-  GetObjectCommand,
-  PutObjectCommand, GetObjectAttributesCommand
-} from '@aws-sdk/client-s3';
 
 interface WorkspaceProps {
   chatStarted?: boolean;
@@ -402,73 +392,8 @@ export const Workbench = memo(
         workbenchStore.setDocumentContentByFile(docContent, docFilePath)
         workbenchStore.saveFile(docFilePath)
       }
-      // console.log('handle sub message from iframe:', event.data);
-      // setIframeReplaceMessageData(data);
-      //
-      // if (msgType == "edit"){
-      //   const textTags:Array<string> = ["p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"]
-      //   if (data.tagName.toLowerCase() == "img") {
-      //     const input = document.getElementById('imageSelectInput');
-      //     input?.click();
-      //   } else if (textTags.includes(data.tagName.toLowerCase())) {
-      //     setInpuDialogDefaultValue(data!.textContent)
-      //     setIsInputDialogOpen(true)
-      //   }
-      // } else if (msgType == "requestEditMode") {
-      //
-      // }
+
     };
-    const onImageSelectInputFilechanged = async (e: ChangeEvent<HTMLInputElement>)=>{
-      // const file = e.target.files?.[0];
-      // var fileInput = document.getElementById('imageSelectInput') as HTMLInputElement;
-      // fileInput!.value = ""
-      // const fileBuffer = await fileToUint8Array(file!);
-      // const fname = Date.now().toString();
-      // const input = { // ListBucketsRequest
-      //   Bucket:import.meta.env.VITE_BUCKET,
-      //   Key:fname,
-      //   Body:fileBuffer,
-      //   ContentType:"image/png",
-      // };
-      // const S3 = new S3Client({
-      //   region: "auto",
-      //   endpoint: import.meta.env.VITE_CLOUDFLARE_ENDPOINT,
-      //   credentials: {
-      //     accessKeyId: import.meta.env.VITE_CLOUDFLARE_ACCESSKEY_ID,
-      //     secretAccessKey: import.meta.env.VITE_CLOUDFLARE_SECRET_ACCESSKEY,
-      //   },
-      // });
-      // const command = new PutObjectCommand(input);
-      // const response = await S3.send(command);
-      // const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
-      // var docContent = workbenchStore.getDocumentByFile(docFilePath).value
-      //
-      // const newSrc = "https://"+import.meta.env.VITE_PUBLIC_DOMAIN+"/" + fname;
-      // var rawImgHTMLStr = iframeReplaceMessageData!.outerHTML
-      // const tempDiv = document.createElement('div');
-      // tempDiv.innerHTML = rawImgHTMLStr;
-      // const imgElement:HTMLImageElement = tempDiv.querySelector('img')!;
-      // imgElement.src = newSrc;
-      // const newImgHTMLStr = imgElement.outerHTML
-      // docContent = docContent.replace(rawImgHTMLStr, newImgHTMLStr)
-      // workbenchStore.setDocumentContentByFile(docContent, docFilePath)
-      // workbenchStore.saveFile(docFilePath)
-    }
-
-    function onInputDialogConfirm(newContent: string): void {
-      // setIsInputDialogOpen(false)
-      // const docFilePath = "/home/project" + new URL(iframeReplaceMessageData!.baseURI).pathname;
-      // var docContent = workbenchStore.getDocumentByFile(docFilePath).value
-      // var rawHTMLStr = iframeReplaceMessageData!.outerHTML
-      // const newHTMLStr = rawHTMLStr.replace(iframeReplaceMessageData!.textContent, newContent)
-      // docContent = docContent.replace(rawHTMLStr, newHTMLStr)
-      // workbenchStore.setDocumentContentByFile(docContent, docFilePath)
-      // workbenchStore.saveFile(docFilePath)
-    }
-
-    function toggleEditMode(isEditMode: boolean){
-
-    }
 
     return (
       chatStarted && (
@@ -490,7 +415,6 @@ export const Workbench = memo(
               },
             )}
           >
-            <input type="file" id="imageSelectInput" className="hidden" accept=".png" hidden={true} onChange={onImageSelectInputFilechanged}/>
             <div className="absolute inset-0 px-2 lg:px-6">
               <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
                 <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor">
@@ -561,15 +485,13 @@ export const Workbench = memo(
                     <DiffView fileHistory={fileHistory} setFileHistory={setFileHistory} actionRunner={actionRunner} />
                   </View>
                   <View initial={{ x: '100%' }} animate={{ x: selectedView === 'preview' ? '0%' : '100%' }}>
-                    <Preview  onToggleEditMode={toggleEditMode} editorSelectedFile={editorSelectedFile}/>
+                    <Preview editorSelectedFile={editorSelectedFile}/>
                   </View>
                 </div>
               </div>
             </div>
           </div>
-          <InputTextDialog isOpen={isInputDialogOpen} onCancel={()=>{
-            setIsInputDialogOpen(false)
-          }} onConfirm={onInputDialogConfirm} value={inpuDialogDefaultValue}></InputTextDialog>
+
           <PushToGitHubDialog
             isOpen={isPushDialogOpen}
             onClose={() => setIsPushDialogOpen(false)}
