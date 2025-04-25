@@ -565,7 +565,9 @@ export class WorkbenchStore {
     for (const [filePath, dirent] of Object.entries(files)) {
       if (dirent?.type === 'file' && !dirent.isBinary) {
         const relativePath = extractRelativePath(filePath);
-
+        if (relativePath.startsWith("src/editor")) {
+          continue;
+        }
         // split the path into segments
         const pathSegments = relativePath.split('/');
 
