@@ -11,6 +11,9 @@
     "email": "maintainers@bolt.diy"
   },
   "scripts": {
+    "express-build": "remix vite:build;bash post-express-build.sh",
+    "express-dev": "node ./server.js",
+    "express-start": "cross-env NODE_ENV=production node ./server.js",
     "deploy": "npm run build && wrangler pages deploy",
     "build": "remix vite:build",
     "dev": "node pre-start.cjs  && remix vite:dev",
@@ -48,6 +51,11 @@
     "node": ">=18.18.0"
   },
   "dependencies": {
+    "@remix-run/express": "*",
+    "compression": "^1.7.4",
+    "cross-env": "^7.0.3",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
     "@ai-sdk/amazon-bedrock": "1.0.6",
     "@ai-sdk/anthropic": "^0.0.39",
     "@ai-sdk/cohere": "^1.0.3",
