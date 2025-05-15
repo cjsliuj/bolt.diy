@@ -1,6 +1,8 @@
+import dns from 'node:dns';
 import dotenv from "dotenv";
 // 确保在所有其他导入和代码之前加载 .env 文件
 dotenv.config();
+dns.setDefaultResultOrder('ipv4first');
 
 // Comment out or remove setup logs if no longer needed
 // console.log("[Server Setup] Attempting to load .env file.");

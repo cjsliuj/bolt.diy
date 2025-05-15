@@ -79,11 +79,24 @@ export default class OpenRouterProvider extends BaseProvider {
     _serverEnv: Record<string, string> = {},
   ): Promise<ModelInfo[]> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(new Error('Fetch timed out after 30 seconds')), 30000); // 30 seconds timeout
+
+      console.log('[OpenRouterProvider] Fetching models from https://openrouter.ai/api/v1/models');
       const response = await fetch('https://openrouter.ai/api/v1/models', {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal, // Add AbortSignal for timeout
       });
+      clearTimeout(timeoutId); // Clear the timeout if fetch completes
+
+      console.log(`[OpenRouterProvider] Response status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[OpenRouterProvider] Error getting OpenRouter models: Status ${response.status}`, errorText);
+        return [];
+      }
 
       const data = (await response.json()) as OpenRouterModelsResponse;
 
@@ -95,8 +108,12 @@ export default class OpenRouterProvider extends BaseProvider {
           provider: this.name,
           maxTokenAllowed: 8000,
         }));
-    } catch (error) {
-      console.error('Error getting OpenRouter models:', error);
+    } catch (error: any) {
+      // Log more details about the error
+      console.error('[OpenRouterProvider] Error getting OpenRouter models (Exception):', error.name, error.message, error.cause);
+      if (error.stack) {
+        console.error('[OpenRouterProvider] Stacktrace:', error.stack);
+      }
       return [];
     }
   }

@@ -417,34 +417,36 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     <rect className={classNames(styles.PromptShine)} x="48" y="24" width="70" height="1"></rect>
                   </svg>
                   <div>
-                    <ClientOnly>
-                      {() => (
-                        <div className={isModelSettingsCollapsed ? 'hidden' : ''}>
-                          <ModelSelector
-                            key={provider?.name + ':' + modelList.length}
-                            model={model}
-                            setModel={setModel}
-                            modelList={modelList}
-                            provider={provider}
-                            setProvider={setProvider}
-                            providerList={providerList || (PROVIDER_LIST as ProviderInfo[])}
-                            apiKeys={apiKeys}
-                            modelLoading={isModelLoading}
-                          />
-                          {(providerList || []).length > 0 &&
-                            provider &&
-                            (!LOCAL_PROVIDERS.includes(provider.name) || 'OpenAILike') && (
-                              <APIKeyManager
-                                provider={provider}
-                                apiKey={apiKeys[provider.name] || ''}
-                                setApiKey={(key) => {
-                                  onApiKeysChange(provider.name, key);
-                                }}
-                              />
-                            )}
-                        </div>
-                      )}
-                    </ClientOnly>
+                    <div className="hidden">
+                      <ClientOnly>
+                        {() => (
+                          <div className={isModelSettingsCollapsed ? 'hidden' : ''}>
+                            <ModelSelector
+                              key={provider?.name + ':' + modelList.length}
+                              model={model}
+                              setModel={setModel}
+                              modelList={modelList}
+                              provider={provider}
+                              setProvider={setProvider}
+                              providerList={providerList || (PROVIDER_LIST as ProviderInfo[])}
+                              apiKeys={apiKeys}
+                              modelLoading={isModelLoading}
+                            />
+                            {(providerList || []).length > 0 &&
+                              provider &&
+                              (!LOCAL_PROVIDERS.includes(provider.name) || 'OpenAILike') && (
+                                <APIKeyManager
+                                  provider={provider}
+                                  apiKey={apiKeys[provider.name] || ''}
+                                  setApiKey={(key) => {
+                                    onApiKeysChange(provider.name, key);
+                                  }}
+                                />
+                              )}
+                          </div>
+                        )}
+                      </ClientOnly>
+                    </div>
                   </div>
                   <FilePreview
                     files={uploadedFiles}

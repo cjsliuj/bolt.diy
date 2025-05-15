@@ -58,6 +58,10 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     parseCookies(cookieHeader || '').providers || '{}',
   );
 
+  const serverEnv = context.serverEnv as Record<string, string> || {};
+  logger.info('[chatAction] serverEnv from context:', JSON.stringify(serverEnv)?.substring(0,300) + "...");
+  logger.info('[chatAction] DEEPSEEK_API_KEY from context serverEnv:', serverEnv?.DEEPSEEK_API_KEY ? 'Loaded' : 'Not Loaded');
+
   const stream = new SwitchableStream();
 
   const cumulativeUsage = {
@@ -100,7 +104,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
           summary = await createSummary({
             messages: [...messages],
-            env: context.cloudflare?.env,
+            env: serverEnv as any,
             apiKeys,
             providerSettings,
             promptId,
@@ -142,7 +146,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           console.log(`Messages count: ${messages.length}`);
           filteredFiles = await selectContext({
             messages: [...messages],
-            env: context.cloudflare?.env,
+            env: serverEnv as any,
             apiKeys,
             files,
             providerSettings,
@@ -240,7 +244,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
             const result = await streamText({
               messages,
-              env: context.cloudflare?.env,
+              env: serverEnv as any,
               options,
               apiKeys,
               files,
@@ -279,7 +283,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
         const result = await streamText({
           messages,
-          env: context.cloudflare?.env,
+          env: serverEnv as any,
           options,
           apiKeys,
           files,
