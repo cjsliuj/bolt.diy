@@ -18,7 +18,7 @@ async function getModelList(options: {
   providerSettings?: Record<string, IProviderSetting>;
   serverEnv?: Record<string, string>;
 }) {
-  const llmManager = LLMManager.getInstance(import.meta.env);
+  const llmManager = LLMManager.getInstance(options.serverEnv as any);
   return llmManager.updateModelList(options);
 }
 
@@ -54,6 +54,8 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const apiKeys = getApiKeysFromCookie(cookieHeader);
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
 
+  const serverEnv = context.serverEnv as Record<string, string> || {};
+
   if (streamOutput) {
     try {
       const result = await streamText({
@@ -66,7 +68,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
             content: `${message}`,
           },
         ],
-        env: context.cloudflare?.env as any,
+        env: serverEnv as any,
         apiKeys,
         providerSettings,
       });
@@ -94,7 +96,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     }
   } else {
     try {
-      const models = await getModelList({ apiKeys, providerSettings, serverEnv: context.cloudflare?.env as any });
+      const models = await getModelList({ apiKeys, providerSettings, serverEnv });
       const modelDetails = models.find((m: ModelInfo) => m.name === model);
 
       if (!modelDetails) {
@@ -109,7 +111,12 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         throw new Error('Provider not found');
       }
 
-      logger.info(`Generating response Provider: ${provider.name}, Model: ${modelDetails.name}`);
+      const modelInstance = providerInfo.getModelInstance({
+        model: modelDetails.name,
+        serverEnv: serverEnv as any,
+        apiKeys,
+        providerSettings,
+      });
 
       const result = await generateText({
         system,
@@ -119,16 +126,10 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
             content: `${message}`,
           },
         ],
-        model: providerInfo.getModelInstance({
-          model: modelDetails.name,
-          serverEnv: context.cloudflare?.env as any,
-          apiKeys,
-          providerSettings,
-        }),
+        model: modelInstance,
         maxTokens: dynamicMaxTokens,
         toolChoice: 'none',
       });
-      logger.info(`Generated response`);
 
       return new Response(JSON.stringify(result), {
         status: 200,

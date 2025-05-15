@@ -1,3 +1,15 @@
+import dotenv from "dotenv";
+// 确保在所有其他导入和代码之前加载 .env 文件
+dotenv.config();
+
+// Comment out or remove setup logs if no longer needed
+// console.log("[Server Setup] Attempting to load .env file.");
+// console.log("[Server Setup] DEEPSEEK_API_KEY from process.env:", 
+//   process.env.DEEPSEEK_API_KEY 
+//     ? `********${process.env.DEEPSEEK_API_KEY.slice(-4)} (Loaded)` 
+//     : "Not Loaded or Undefined"
+// );
+
 import { createRequestHandler } from "@remix-run/express";
 import compression from "compression";
 import express from "express";
@@ -16,6 +28,20 @@ const remixHandler = createRequestHandler({
   build: viteDevServer
     ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
     : await import("./build/server/index.js"),
+  mode: process.env.NODE_ENV,
+  getLoadContext(req, res) {
+    // Comment out or remove getLoadContext logs if no longer needed
+    // console.log("[Server GetLoadContext] Creating load context.");
+    const serverEnv = {
+      DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
+      // Add other server-side environment variables here as needed
+      // e.g., OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    };
+    // console.log("[Server GetLoadContext] DEEPSEEK_API_KEY in getLoadContext:", serverEnv.DEEPSEEK_API_KEY ? `********${serverEnv.DEEPSEEK_API_KEY.slice(-4)} (Set)` : "Not Set");
+    return {
+      serverEnv: serverEnv, 
+    };
+  },
 });
 
 const app = express();
@@ -46,6 +72,12 @@ app.use(morgan("tiny"));
 app.all("*", remixHandler);
 
 const port = process.env.PORT || 5173;
-app.listen(port, () =>
-  console.log(`Express server listening at http://localhost:${port}`)
-);
+app.listen(port, () => {
+  console.log(`Express server listening at http://localhost:${port}`);
+  // console.log("[Server Running] NODE_ENV:", process.env.NODE_ENV);
+  // console.log("[Server Running] DEEPSEEK_API_KEY check again:", 
+  //   process.env.DEEPSEEK_API_KEY 
+  //     ? `********${process.env.DEEPSEEK_API_KEY.slice(-4)} (Still Loaded)` 
+  //     : "No Longer Loaded or Undefined (Problem!)"
+  // );
+});
