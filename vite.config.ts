@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-dotenv.config();
+dotenv.config({ path: '.env.production' });
 
 const getGitInfo = () => {
   try {
