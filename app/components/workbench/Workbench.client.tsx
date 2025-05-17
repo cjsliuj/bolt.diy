@@ -544,7 +544,10 @@ export const Workbench = memo(
                     <DiffView fileHistory={fileHistory} setFileHistory={setFileHistory} actionRunner={actionRunner} />
                   </View>
                   <View initial={{ x: '100%' }} animate={{ x: selectedView === 'preview' ? '0%' : '100%' }}>
-                    <Preview editorSelectedFile={editorSelectedFile}/>
+                    <Preview 
+                        editorSelectedFile={editorSelectedFile}
+                        chatStarted={chatStarted}
+                    />
                   </View>
                 </div>
               </div>

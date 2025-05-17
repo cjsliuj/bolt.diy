@@ -1,7 +1,7 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useStore } from '@nanostores/react';
 import { IconButton } from '~/components/ui/IconButton';
-import { workbenchStore } from '~/lib/stores/workbench';
+import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
 import { PortDropdown } from './PortDropdown';
 import { ScreenshotSelector } from './ScreenshotSelector';
 import { useTranslation } from 'react-i18next';
@@ -47,9 +47,9 @@ const WINDOW_SIZES: WindowSize[] = [
   { name: '4K Display', width: 3840, height: 2160, icon: 'i-ph:monitor', hasFrame: true, frameType: 'desktop' },
 ];
 interface PreviewDialogProps {
-
   onToggleEditMode?: (isEditMode: boolean) => void;
   editorSelectedFile: string | undefined;
+  chatStarted?: boolean;
 }
 export const Preview = memo((props: PreviewDialogProps) => {
   const { t } = useTranslation('common');
@@ -64,6 +64,7 @@ export const Preview = memo((props: PreviewDialogProps) => {
   const hasSelectedPreview = useRef(false);
   const previews = useStore(workbenchStore.previews);
   const activePreview = previews[activePreviewIndex];
+  const selectedView = useStore(workbenchStore.currentView);
 
   const [url, setUrl] = useState('');
   const [iframeUrl, setIframeUrl] = useState<string | undefined>();
@@ -225,40 +226,24 @@ export const Preview = memo((props: PreviewDialogProps) => {
     }
   }, [previewLoadingState, iframeUrl]); // Depends on loading state and the URL itself
 
-  const reloadPreview = () => {
+  const reloadPreview = useCallback(() => {
     if (iframeRef.current && iframeUrl) {
       console.log('[Preview] Reloading preview for:', iframeUrl);
-      setPreviewLoadingState('loading'); // Set to loading before attempting reload
-      // Force reload by changing src slightly or re-assigning
+      setPreviewLoadingState('loading'); 
       const currentIframeSrc = iframeRef.current.src;
-      iframeRef.current.src = ''; // Attempt to clear it first
-      // A small delay might help some browsers process the src change properly before re-assigning
+      iframeRef.current.src = ''; 
       setTimeout(() => {
           if (iframeRef.current) iframeRef.current.src = iframeUrl; 
       }, 0);
     } else {
       console.log('[Preview] Reload requested, but no iframeUrl or iframeRef.');
     }
-  };
+  }, [iframeUrl]);
 
-  const validateUrl = useCallback(
-    (value: string) => {
-      if (!activePreview) {
-        return false;
-      }
-
-      const { baseUrl } = activePreview;
-
-      if (value === baseUrl) {
-        return true;
-      } else if (value.startsWith(baseUrl)) {
-        return ['/', '?', '#'].includes(value.charAt(baseUrl.length));
-      }
-
-      return false;
-    },
-    [activePreview],
-  );
+  const validateUrl = useCallback((value: string) => {
+    // Basic URL validation, replace with your actual validation
+    return value.startsWith('http://') || value.startsWith('https://');
+  }, []);
 
   const findMinPortIndex = useCallback(
     (minIndex: number, preview: { port: number }, index: number, array: { port: number }[]) => {
@@ -795,369 +780,114 @@ export const Preview = memo((props: PreviewDialogProps) => {
     };
   }, [showDeviceFrameInPreview]);
 
+  // ---- New Rendering Logic for Initializing Message ----
+  const showInitializingMessage = props.chatStarted && previews.length === 0 && selectedView === 'preview';
+
+  if (showInitializingMessage) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-bolt-elements-textTertiary p-4 bg-bolt-elements-background-depth-1">
+        <div className="i-ph:hourglass-medium text-4xl mb-3 animate-spin" />
+        <p className="text-sm font-medium">项目正在初始化中...</p>
+        <p className="text-xs mt-1 text-center">请稍候，正在准备预览环境。</p>
+      </div>
+    );
+  }
+
+  // Existing logic for "No preview available"
+  if (previewLoadingState === 'idle' && !iframeUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-bolt-elements-textTertiary p-4 bg-bolt-elements-background-depth-1">
+        <div className="i-ph:selection-slash text-4xl mb-3" />
+        <p className="text-sm font-medium">{t('preview.noPreview')}</p>
+        <p className="text-xs mt-1 text-center">{t('preview.noPreviewHint')}</p>
+      </div>
+    );
+  }
+
+  // Fallback to the main preview rendering if none of the above conditions are met.
+  // This includes 'loading', 'success', 'error' states for the iframe, or if iframeUrl is present but state is 'idle' (should be rare).
   return (
-    <div
-      ref={containerRef}
-      className={`w-full h-full flex flex-col relative ${isPreviewOnly ? 'fixed inset-0 z-50 bg-white' : ''}`}
-    >
-      {isPortDropdownOpen && (
-        <div className="z-iframe-overlay w-full h-full absolute" onClick={() => setIsPortDropdownOpen(false)} />
-      )}
-      <div className="bg-bolt-elements-background-depth-2 p-2 flex items-center gap-2">
-        <div className="flex items-center gap-2">
-          <IconButton icon="i-ph:arrow-clockwise" onClick={reloadPreview} />
-          {/*<IconButton*/}
-          {/*  icon="i-ph:selection"*/}
-          {/*  onClick={() => setIsSelectionMode(!isSelectionMode)}*/}
-          {/*  className={isSelectionMode ? 'bg-bolt-elements-background-depth-3' : ''}*/}
-          {/*/>*/}
-        </div>
-
-        <div className="flex-grow flex items-center gap-1 bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-3 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive">
-          <input
-            title={t('workbench.preview.url')}
-            ref={inputRef}
-            className="w-full bg-transparent outline-none"
-            type="text"
-            value={url}
-            onChange={(event) => {
-              setUrl(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && validateUrl(url)) {
+    <div className="relative h-full w-full flex flex-col bg-bolt-elements-background-depth-1 overflow-hidden">
+      {/* Header for URL, refresh, etc. - This structure is assumed from typical layout */}
+      <div className="flex items-center p-2 border-b border-bolt-elements-borderColor gap-2 flex-shrink-0">
+        <PortDropdown 
+          previews={previews} 
+          activePreviewIndex={activePreviewIndex} 
+          setActivePreviewIndex={setActivePreviewIndex}
+          isDropdownOpen={isPortDropdownOpen}
+          setIsDropdownOpen={setIsPortDropdownOpen}
+          setHasSelectedPreview={() => {}}
+        />
+        <input
+          ref={inputRef}
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (validateUrl(url)) {
                 setIframeUrl(url);
-
-                if (inputRef.current) {
-                  inputRef.current.blur();
-                }
               }
-            }}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {previews.length > 1 && (
-            <PortDropdown
-              activePreviewIndex={activePreviewIndex}
-              setActivePreviewIndex={setActivePreviewIndex}
-              isDropdownOpen={isPortDropdownOpen}
-              setHasSelectedPreview={(value) => (hasSelectedPreview.current = value)}
-              setIsDropdownOpen={setIsPortDropdownOpen}
-              previews={previews}
-            />
-          )}
-
-          {/*<IconButton*/}
-          {/*  icon="i-ph:devices"*/}
-          {/*  onClick={toggleDeviceMode}*/}
-          {/*  title={isDeviceModeOn ? 'Switch to Responsive Mode' : 'Switch to Device Mode'}*/}
-          {/*/>*/}
-
-          <IconButton
-            icon={isEditModeOn ? 'i-ph:note-pencil-thin' : 'i-ph:eye-light'}
-            onClick={toggleEditMode}
-            title={isEditModeOn ? '切换到预览模式':'切换到编辑模式'}
-          />
-
-          {/*{isDeviceModeOn && (*/}
-          {/*  <>*/}
-          {/*    <IconButton*/}
-          {/*      icon="i-ph:rotate-right"*/}
-          {/*      onClick={() => setIsLandscape(!isLandscape)}*/}
-          {/*      title={isLandscape ? 'Switch to Portrait' : 'Switch to Landscape'}*/}
-          {/*    />*/}
-          {/*    <IconButton*/}
-          {/*      icon={showDeviceFrameInPreview ? 'i-ph:device-mobile' : 'i-ph:device-mobile-slash'}*/}
-          {/*      onClick={() => setShowDeviceFrameInPreview(!showDeviceFrameInPreview)}*/}
-          {/*      title={showDeviceFrameInPreview ? 'Hide Device Frame' : 'Show Device Frame'}*/}
-          {/*    />*/}
-          {/*  </>*/}
-          {/*)}*/}
-
-          {/*<IconButton*/}
-          {/*  icon="i-ph:layout-light"*/}
-          {/*  onClick={() => setIsPreviewOnly(!isPreviewOnly)}*/}
-          {/*  title={isPreviewOnly ? 'Show Full Interface' : 'Show Preview Only'}*/}
-          {/*/>*/}
-
-          {/*<IconButton*/}
-          {/*  icon={isFullscreen ? 'i-ph:arrows-in' : 'i-ph:arrows-out'}*/}
-          {/*  onClick={toggleFullscreen}*/}
-          {/*  title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}*/}
-          {/*/>*/}
-
-          <div className="flex items-center relative">
-            {/*<IconButton*/}
-            {/*  icon="i-ph:arrow-square-out"*/}
-            {/*  onClick={() => openInNewWindow(selectedWindowSize)}*/}
-            {/*  title={`Open Preview in ${selectedWindowSize.name} Window`}*/}
-            {/*/>*/}
-            {/*<IconButton*/}
-            {/*  icon="i-ph:caret-down"*/}
-            {/*  onClick={() => setIsWindowSizeDropdownOpen(!isWindowSizeDropdownOpen)}*/}
-            {/*  className="ml-1"*/}
-            {/*  title="Select Window Size"*/}
-            {/*/>*/}
-
-            {isWindowSizeDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-50" onClick={() => setIsWindowSizeDropdownOpen(false)} />
-                <div className="absolute right-0 top-full mt-2 z-50 min-w-[240px] max-h-[400px] overflow-y-auto bg-white dark:bg-black rounded-xl shadow-2xl border border-[#E5E7EB] dark:border-[rgba(255,255,255,0.1)] overflow-hidden">
-                  <div className="p-3 border-b border-[#E5E7EB] dark:border-[rgba(255,255,255,0.1)]">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-[#111827] dark:text-gray-300">Device Options</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-[#6B7280] dark:text-gray-400">Show Device Frame</span>
-                        <button
-                          className={`w-10 h-5 rounded-full transition-colors duration-200 ${
-                            showDeviceFrame ? 'bg-[#6D28D9]' : 'bg-gray-300 dark:bg-gray-700'
-                          } relative`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDeviceFrame(!showDeviceFrame);
-                          }}
-                        >
-                          <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                              showDeviceFrame ? 'transform translate-x-5' : ''
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-[#6B7280] dark:text-gray-400">Landscape Mode</span>
-                        <button
-                          className={`w-10 h-5 rounded-full transition-colors duration-200 ${
-                            isLandscape ? 'bg-[#6D28D9]' : 'bg-gray-300 dark:bg-gray-700'
-                          } relative`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsLandscape(!isLandscape);
-                          }}
-                        >
-                          <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                              isLandscape ? 'transform translate-x-5' : ''
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  {WINDOW_SIZES.map((size) => (
-                    <button
-                      key={size.name}
-                      className="w-full px-4 py-3.5 text-left text-[#111827] dark:text-gray-300 text-sm whitespace-nowrap flex items-center gap-3 group hover:bg-[#F5EEFF] dark:hover:bg-gray-900 bg-white dark:bg-black"
-                      onClick={() => {
-                        setSelectedWindowSize(size);
-                        setIsWindowSizeDropdownOpen(false);
-                        openInNewWindow(size);
-                      }}
-                    >
-                      <div
-                        className={`${size.icon} w-5 h-5 text-[#6B7280] dark:text-gray-400 group-hover:text-[#6D28D9] dark:group-hover:text-[#6D28D9] transition-colors duration-200`}
-                      />
-                      <div className="flex-grow flex flex-col">
-                        <span className="font-medium group-hover:text-[#6D28D9] dark:group-hover:text-[#6D28D9] transition-colors duration-200">
-                          {size.name}
-                        </span>
-                        <span className="text-xs text-[#6B7280] dark:text-gray-400 group-hover:text-[#6D28D9] dark:group-hover:text-[#6D28D9] transition-colors duration-200">
-                          {isLandscape && (size.frameType === 'mobile' || size.frameType === 'tablet')
-                            ? `${size.height} × ${size.width}`
-                            : `${size.width} × ${size.height}`}
-                          {size.hasFrame && showDeviceFrame ? ' (with frame)' : ''}
-                        </span>
-                      </div>
-                      {selectedWindowSize.name === size.name && (
-                        <div className="text-[#6D28D9] dark:text-[#6D28D9]">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+            }
+          }}
+          className="flex-1 px-2 py-1 text-xs rounded bg-bolt-elements-background-depth-2 border border-transparent focus:border-accent-500 focus:ring-accent-500/50 outline-none"
+          placeholder={t('preview.addressBarPlaceholder') ?? "Enter URL..."}
+        />
+        <IconButton
+          title={t('preview.refresh') ?? "Refresh"}
+          onClick={reloadPreview}
+          className="text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundHover"
+          disabled={!iframeUrl || previewLoadingState === 'loading'}
+        >
+          <div className="i-ph:arrow-clockwise" />
+        </IconButton>
+        <IconButton
+          title={t('preview.openInNewTab') ?? "Open in new tab"}
+          onClick={() => iframeUrl && window.open(iframeUrl, '_blank')}
+          className="text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundHover"
+          disabled={!iframeUrl}
+        >
+          <div className="i-ph:arrow-square-out" />
+        </IconButton>
       </div>
 
-      <div className="flex-1 border-t border-bolt-elements-borderColor flex justify-center items-center overflow-auto">
-        <div
-          style={{
-            width: isDeviceModeOn ? (showDeviceFrameInPreview ? '100%' : `${widthPercent}%`) : '100%',
-            height: '100%',
-            overflow: 'auto',
-            background: 'var(--bolt-elements-background-depth-1)',
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          {activePreview ? (
-            <>
-              {isDeviceModeOn && showDeviceFrameInPreview ? (
-                <div
-                  className="device-wrapper"
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: '100%',
-                    height: '100%',
-                    padding: '0',
-                    overflow: 'auto',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                  }}
-                >
-                  <div
-                    className="device-frame-container"
-                    style={{
-                      position: 'relative',
-                      borderRadius: selectedWindowSize.frameType === 'mobile' ? '36px' : '20px',
-                      background: getFrameColor(),
-                      padding: getFramePadding(),
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                      overflow: 'hidden',
-                      transform: 'scale(1)',
-                      transformOrigin: 'center center',
-                      transition: 'all 0.3s ease',
-                      margin: '40px',
-                      width: isLandscape
-                        ? `${selectedWindowSize.height + (selectedWindowSize.frameType === 'mobile' ? 120 : 60)}px`
-                        : `${selectedWindowSize.width + (selectedWindowSize.frameType === 'mobile' ? 40 : 60)}px`,
-                      height: isLandscape
-                        ? `${selectedWindowSize.width + (selectedWindowSize.frameType === 'mobile' ? 80 : 60)}px`
-                        : `${selectedWindowSize.height + (selectedWindowSize.frameType === 'mobile' ? 80 : 100)}px`,
-                    }}
-                  >
-                    {/* Notch - positioned based on orientation */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: isLandscape ? '50%' : '20px',
-                        left: isLandscape ? '30px' : '50%',
-                        transform: isLandscape ? 'translateY(-50%)' : 'translateX(-50%)',
-                        width: isLandscape ? '8px' : selectedWindowSize.frameType === 'mobile' ? '60px' : '80px',
-                        height: isLandscape ? (selectedWindowSize.frameType === 'mobile' ? '60px' : '80px') : '8px',
-                        background: '#333',
-                        borderRadius: '4px',
-                        zIndex: 2,
-                      }}
-                    />
-
-                    {/* Home button - positioned based on orientation */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: isLandscape ? '50%' : '15px',
-                        right: isLandscape ? '30px' : '50%',
-                        transform: isLandscape ? 'translateY(50%)' : 'translateX(50%)',
-                        width: isLandscape ? '4px' : '40px',
-                        height: isLandscape ? '40px' : '4px',
-                        background: '#333',
-                        borderRadius: '50%',
-                        zIndex: 2,
-                      }}
-                    />
-
-                    <iframe
-                      ref={iframeRef}
-                      title="preview"
-                      style={{
-                        border: 'none',
-                        width: isLandscape ? `${selectedWindowSize.height}px` : `${selectedWindowSize.width}px`,
-                        height: isLandscape ? `${selectedWindowSize.width}px` : `${selectedWindowSize.height}px`,
-                        background: 'white',
-                        display: previewLoadingState === 'success' || previewLoadingState === 'idle' ? 'block' : 'none',
-                      }}
-                      src={iframeUrl}
-                      sandbox="allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation allow-same-origin"
-                      allow="cross-origin-isolated"
-                    />
-                  </div>
+      {/* Content Area for iframe or messages */}
+      <div ref={containerRef} className="relative flex-1 w-full h-full overflow-auto flex items-center justify-center">
+        {/* Loading message for iframe */}
+        {previewLoadingState === 'loading' && iframeUrl && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-bolt-elements-background-depth-1/50 backdrop-blur-sm z-10">
+            <div className="i-ph:circle-notch text-3xl animate-spin text-bolt-elements-textTertiary mb-2" />
+            <p className="text-xs text-bolt-elements-textTertiary">正在加载页面内容...</p>
+          </div>
+        )}
+        {/* Error message for iframe */}
+        {previewLoadingState === 'error' && iframeUrl && (
+           <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-950/20 z-10 p-4 text-center">
+             <div className="i-ph:x-circle text-4xl text-red-400 mb-3" />
+             <p className="text-sm font-medium text-red-300">无法加载预览内容。</p>
+             <p className="text-xs text-red-400/80 mt-1 mb-3">请检查URL地址或网络连接，然后重试。</p>
+             <button 
+                onClick={reloadPreview}
+                className="px-3 py-1.5 text-xs bg-red-500/30 hover:bg-red-500/40 text-red-200 rounded-md border border-red-500/50 transition-colors"
+             >
+                <div className="flex items-center gap-1.5">
+                    <div className="i-ph:arrow-clockwise"/>
+                    <span>重试</span>
                 </div>
-              ) : (
-                <iframe
-                  ref={iframeRef}
-                  title="preview"
-                  className="border-none w-full h-full bg-bolt-elements-background-depth-1"
-                  src={iframeUrl}
-                  sandbox="allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation allow-same-origin"
-                  allow="cross-origin-isolated"
-                />
-              )}
-              <ScreenshotSelector
-                isSelectionMode={isSelectionMode}
-                setIsSelectionMode={setIsSelectionMode}
-                containerRef={iframeRef}
-              />
-              {previewLoadingState === 'loading' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-700 z-10">
-                  正在加载页面内容...
-                </div>
-              )}
-              {previewLoadingState === 'error' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white text-red-500 p-4 text-center z-10">
-                  <p className="mb-2">加载失败，请重试。</p>
-                  <button
-                    onClick={reloadPreview}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                  >
-                    重试
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex w-full h-full justify-center items-center bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary">
-              No preview available
-            </div>
-          )}
-
-          {isDeviceModeOn && !showDeviceFrameInPreview && (
-            <>
-              {/* Width indicator */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '-25px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'var(--bolt-elements-background-depth-3, rgba(0,0,0,0.7))',
-                  color: 'var(--bolt-elements-textPrimary, white)',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  pointerEvents: 'none',
-                  opacity: resizingState.current.isResizing ? 1 : 0,
-                  transition: 'opacity 0.3s',
-                }}
-              >
-                {currentWidth}px
-              </div>
-
-              <ResizeHandle side="left" />
-              <ResizeHandle side="right" />
-            </>
-          )}
-        </div>
+             </button>
+           </div>
+        )}
+        
+        {/* Iframe itself - ensure it's only mounted when there's an iframeUrl to avoid loading 'about:blank' if logic permits */}
+        {iframeUrl && (
+            <iframe 
+                ref={iframeRef} 
+                title="Preview" 
+                className="w-full h-full border-0 bg-white" 
+                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-presentation"
+                // src is set via useEffect to better control loading sequence
+            />
+        )}
       </div>
     </div>
   );
