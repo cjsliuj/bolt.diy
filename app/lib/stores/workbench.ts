@@ -5,7 +5,7 @@ import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/mes
 import { webcontainer } from '~/lib/webcontainer';
 import type { ITerminal } from '~/types/terminal';
 import { unreachable } from '~/utils/unreachable';
-import { EditorStore } from './editor';
+import { EditorStore, currentDocument as editorCurrentDocumentAtom } from './editor';
 import { FilesStore, type FileMap } from './files';
 import { PreviewsStore } from './previews';
 import { TerminalStore } from './terminal';
@@ -89,7 +89,7 @@ export class WorkbenchStore {
   }
 
   get currentDocument(): ReadableAtom<EditorDocument | undefined> {
-    return this.#editorStore.currentDocument;
+    return editorCurrentDocumentAtom;
   }
 
   get selectedFile(): ReadableAtom<string | undefined> {

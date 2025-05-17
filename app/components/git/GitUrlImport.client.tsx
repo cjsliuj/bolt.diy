@@ -12,7 +12,6 @@ import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
 import { toast } from 'react-toastify';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
-import { useChatManager } from '~/lib/hooks/useChatManager';
 import { useTranslation } from 'react-i18next';
 
 const IGNORE_PATTERNS = [
@@ -48,7 +47,6 @@ export function GitUrlImport() {
   const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { chatHistoryActions } = useChatManager();
   const { t } = useTranslation();
 
   const importRepo = async (repoUrl?: string) => {

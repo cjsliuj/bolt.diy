@@ -277,314 +277,379 @@ const FileModifiedDropdown = memo(
   },
 );
 
-export const Workbench = memo(
-  ({ chatStarted, isStreaming, actionRunner, metadata, updateChatMestaData }: WorkspaceProps) => {
-    renderLogger.trace('Workbench');
-    const initialPreviewSet = useRef(false);
-    const automaticViewCorrectionDone = useRef(false);
-    const [isSyncing, setIsSyncing] = useState(false);
-    const [isPushDialogOpen, setIsPushDialogOpen] = useState(false);
-    const [fileHistory, setFileHistory] = useState<Record<string, FileHistory>>({});
-    const [editorSelectedFile, setEditorSelectedFile] = useState<string|undefined>("");
-    const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
-    const showWorkbench = useStore(workbenchStore.showWorkbench);
-    const { showChat } = useStore(chatStore);
-    const selectedFile = useStore(workbenchStore.selectedFile);
-    const currentDocument = useStore(workbenchStore.currentDocument);
-    const unsavedFiles = useStore(workbenchStore.unsavedFiles);
-    const files = useStore(workbenchStore.files);
-    const selectedView = useStore(workbenchStore.currentView);
+export const Workbench =
+  // eslint-disable-next-line react/display-name
+  memo(
+    ({ chatStarted: propsChatStarted, isStreaming, actionRunner, metadata, updateChatMestaData }: WorkspaceProps) => {
+      renderLogger.trace('Workbench');
+      const files = useStore(workbenchStore.files);
+      const selectedFileFromStore = useStore(workbenchStore.selectedFile); // Renamed for clarity
+      const currentViewFromStore = useStore(workbenchStore.currentView);
 
-    console.log('[Workbench] Rendering with selectedView from store:', selectedView);
+      const initialFileOpened = useRef(false); // For index.html logic
+      const initialPreviewSet = useRef(false); // For existing preview logic
+      const automaticViewCorrectionDone = useRef(false); // For existing preview logic
+      const [isSyncing, setIsSyncing] = useState(false);
+      const [isPushDialogOpen, setIsPushDialogOpen] = useState(false);
+      const [fileHistory, setFileHistory] = useState<Record<string, FileHistory>>({});
+      const [editorSelectedFile, setEditorSelectedFile] = useState<string|undefined>("");
+      const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
+      const showWorkbench = useStore(workbenchStore.showWorkbench);
+      const { showChat } = useStore(chatStore);
+      const currentDocument = useStore(workbenchStore.currentDocument);
+      const unsavedFiles = useStore(workbenchStore.unsavedFiles);
+      const filesMap = useStore(workbenchStore.files);
+      const currentWorkbenchView = useStore(workbenchStore.currentView);
 
-    const isSmallViewport = useViewport(1024);
+      console.log('[Workbench] Rendering with selectedView from store:', currentViewFromStore);
 
-    const setSelectedView = (view: WorkbenchViewType) => {
-      console.log(`[Workbench] setSelectedView called with: ${view}. Current store value before set: ${workbenchStore.currentView.get()}`);
-      workbenchStore.currentView.set(view);
-      console.log(`[Workbench] Store value after set: ${workbenchStore.currentView.get()}`);
-    };
+      const isSmallViewport = useViewport(1024);
 
-    useEffect(() => {
-      workbenchStore.toggleTerminal(false);
-
-      window.addEventListener('message', handleIFrameMessage);
-      return () => {
-        window.removeEventListener('message', handleIFrameMessage);
+      const setSelectedView = (view: WorkbenchViewType) => {
+        console.log(`[Workbench] setSelectedView called with: ${view}. Current store value before set: ${workbenchStore.currentView.get()}`);
+        workbenchStore.currentView.set(view);
+        console.log(`[Workbench] Store value after set: ${workbenchStore.currentView.get()}`);
       };
 
-    }, []);
+      useEffect(() => {
+        workbenchStore.toggleTerminal(false);
 
-    useEffect(() => {
-      const currentViewActual = workbenchStore.currentView.get();
-      const filesFromStore = workbenchStore.files.get();
-
-      let filesArePopulated = false;
-      let filesLengthForLog = -1;
-      if (Array.isArray(filesFromStore)) {
-        filesArePopulated = filesFromStore.length > 0;
-        filesLengthForLog = filesFromStore.length;
-      } else if (typeof filesFromStore === 'object' && filesFromStore !== null) {
-        filesArePopulated = Object.keys(filesFromStore).length > 0;
-        filesLengthForLog = Object.keys(filesFromStore).length;
-      }
-
-      console.log(
-        '[Workbench InitialSwitchEffectRevised v4.1] Running.', {
-          chatStarted,
-          initialPreviewSet: initialPreviewSet.current,
-          automaticViewCorrectionDone: automaticViewCorrectionDone.current,
-          currentViewActual,
-          hasPreview, 
-          filesArePopulated,
-          filesLengthForLog
-        }
-      );
-
-      if (chatStarted && !initialPreviewSet.current) {
-        // Phase 1: Initial switch to preview
-        if (currentViewActual !== 'preview') {
-          console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 1: Initial switch. Setting to preview.');
-          setSelectedView('preview');
-        }
-        initialPreviewSet.current = true;
-      } else if (chatStarted && initialPreviewSet.current && !automaticViewCorrectionDone.current) {
-        // Phase 2: Try to keep view on 'preview' until files are populated and view is stable.
-        if (currentViewActual === 'code') {
-          console.warn('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is "code". Re-asserting "preview".');
-          setSelectedView('preview');
-          if (filesArePopulated) {
-            console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: Switched from code to preview, files populated. Marking correction done.');
-            automaticViewCorrectionDone.current = true;
-          } else {
-            console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: Switched from code to preview, but files NOT yet populated. Correction NOT marked done.');
-          }
-        } else if (currentViewActual === 'preview' && filesArePopulated) {
-          console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is "preview" and files populated. Marking correction done.');
-          automaticViewCorrectionDone.current = true;
-        } else {
-          console.log(`[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is "${currentViewActual}", filesPopulated: ${filesArePopulated}. No state change or conditions not met for marking done.`);
-        }
-      } else {
-        let reason = "Automatic switching phases complete or conditions not met.";
-        if (!chatStarted) {
-            reason = "chatStarted is false.";
-        } else if (!initialPreviewSet.current) {
-            reason = "Phase 1 (initial preview set) not yet done.";
-        } else if (automaticViewCorrectionDone.current) {
-            reason = "All automatic view control phases (initial set & one-time correction) are done.";
-        }
-        console.log(`[Workbench InitialSwitchEffectRevised v4.1] No automatic switching action. Reason: ${reason} Current view: ${currentViewActual}`);
-      }
-    }, [chatStarted, hasPreview, files, setSelectedView]);
-
-    useEffect(() => {
-      workbenchStore.setDocuments(files);
-    }, [files]);
-
-    const onEditorChange = useCallback<OnEditorChange>((update) => {
-      workbenchStore.setCurrentDocumentContent(update.content);
-    }, []);
-
-    const onEditorScroll = useCallback<OnEditorScroll>((position) => {
-      workbenchStore.setCurrentDocumentScrollPosition(position);
-    }, []);
-
-    const onFileSelect = useCallback((filePath: string | undefined) => {
-      workbenchStore.setSelectedFile(filePath);
-      setEditorSelectedFile(filePath);
-      // if (workbenchStore.currentView.get() !== 'preview') {
-      //   console.log('[Workbench] File selected in editor, switching to preview tab.');
-      //   setSelectedView('preview');
-      // }
-    }, [setEditorSelectedFile]);
-
-    const onFileSave = useCallback(() => {
-      workbenchStore.saveCurrentDocument().catch(() => {
-        toast.error('Failed to update file content');
-      });
-    }, []);
-
-    const onFileReset = useCallback(() => {
-      workbenchStore.resetCurrentDocument();
-    }, []);
-
-    const handleSyncFiles = useCallback(async () => {
-      setIsSyncing(true);
-
-      try {
-        const directoryHandle = await window.showDirectoryPicker();
-        await workbenchStore.syncFiles(directoryHandle);
-        toast.success('Files synced successfully');
-      } catch (error) {
-        console.error('Error syncing files:', error);
-        toast.error('Failed to sync files');
-      } finally {
-        setIsSyncing(false);
-      }
-    }, []);
-
-    const handleSelectFile = useCallback((filePath: string) => {
-      workbenchStore.setSelectedFile(filePath);
-      workbenchStore.currentView.set('diff');
-    }, []);
-    const fileToUint8Array = (file:File):Promise<Uint8Array> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const arrayBuffer = e.target!.result as ArrayBuffer;
-          resolve(new Uint8Array(arrayBuffer));
+        window.addEventListener('message', handleIFrameMessage);
+        return () => {
+          window.removeEventListener('message', handleIFrameMessage);
         };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-      });
-    }
-    const handleIFrameMessage = (event:any) => {
-      const data = event.data as IFrameReplaceMessageData
-      console.log(data)
-      const msgType = data["msgType"]
-      if (msgType == undefined) {
-        return
-      }
-      if (msgType == "save") {
-        const newBodyInnerHTML = data.bodyInnerHTML;
-        const docFilePath = "/home/project" + new URL(data.baseURI).pathname;
-        var docContent = workbenchStore.getDocumentByFile(docFilePath).value
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(docContent, "text/html");
-        const bodyElement = xmlDoc.getElementsByTagName("body")[0];
-          bodyElement.innerHTML = newBodyInnerHTML;
-          console.log(bodyElement)
-        const serializer = new XMLSerializer();
-        docContent = serializer.serializeToString(xmlDoc);
-        workbenchStore.setDocumentContentByFile(docContent, docFilePath)
-        workbenchStore.saveFile(docFilePath)
-      }
 
-    };
+      }, []);
 
-    return (
-      chatStarted && (
-        <motion.div
-          initial="closed"
-          animate={showWorkbench ? 'open' : 'closed'}
-          variants={workbenchVariants}
-          className="z-workbench h-full"
-        >
-          <div
-            className={classNames(
-              'fixed inset-y-0 w-[var(--workbench-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
-              {
-                'w-full': isSmallViewport,
-                'left-0': showWorkbench && isSmallViewport,
-                'left-[var(--workbench-left)]': showWorkbench,
-                'left-[100%]': !showWorkbench,
-              },
-            )}
+      useEffect(() => {
+        const currentViewActual = workbenchStore.currentView.get();
+        const previews = workbenchStore.previews.get();
+        const hasReadyPreview = previews && previews.length > 0 && previews.some(p => p.port !== undefined && p.ready);
+        const localFiles = workbenchStore.files.get(); // Get current files state
+
+        // console.log(
+        //   '[Workbench InitialSwitchEffectRevised v4.1] Running.', {
+        //     propsChatStarted,
+        //     initialPreviewSet: initialPreviewSet.current,
+        //     automaticViewCorrectionDone: automaticViewCorrectionDone.current,
+        //     currentViewActual,
+        //     hasReadyPreview,
+        //     filesLoaded: localFiles && Object.keys(localFiles).length > 0,
+        //   }
+        // );
+
+        if (propsChatStarted && !initialPreviewSet.current) {
+          // Phase 1: Initial switch to preview
+          if (currentViewActual !== 'preview') {
+            // console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 1: Setting view to preview');
+            workbenchStore.currentView.set('preview');
+          }
+          initialPreviewSet.current = true;
+          // console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 1: initialPreviewSet set to true');
+        } else if (propsChatStarted && initialPreviewSet.current && !automaticViewCorrectionDone.current) {
+          // Phase 2: Try to keep view on 'preview' until files are populated and view is stable.
+          if (currentViewActual === 'code') {
+            // Only correct to preview if files are loaded (or no preview exists which implies no files yet or non-previewable project)
+            if ((localFiles && Object.keys(localFiles).length > 0)) { 
+              // console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: Correcting view to preview because files are loaded.');
+              workbenchStore.currentView.set('preview');
+              automaticViewCorrectionDone.current = true;
+              // console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: automaticViewCorrectionDone set to true');
+            }
+          } else if (currentViewActual === 'preview') {
+             // If it's already preview and files are loaded, then correction is also done.
+            if (localFiles && Object.keys(localFiles).length > 0) {
+                automaticViewCorrectionDone.current = true;
+                // console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is already preview and files loaded, correction done.');
+            }
+          }
+        }
+        // Dependencies: propsChatStarted to react to chat start.
+        // localFiles (or rather, its source workbenchStore.files) changes when files are loaded, which is crucial for Phase 2.
+        // currentViewActual is read directly, so not a direct dep, but its changes are what this effect might react to.
+      }, [propsChatStarted, files]); // `files` (the store value) is a dependency to re-run when filesMap populates
+
+      useEffect(() => {
+        workbenchStore.setDocuments(files);
+      }, [files]);
+
+      const onEditorChange = useCallback<OnEditorChange>((update) => {
+        workbenchStore.setCurrentDocumentContent(update.content);
+      }, []);
+
+      const onEditorScroll = useCallback<OnEditorScroll>((position) => {
+        workbenchStore.setCurrentDocumentScrollPosition(position);
+      }, []);
+
+      const onFileSelect = useCallback((filePath: string | undefined) => {
+        workbenchStore.setSelectedFile(filePath);
+        setEditorSelectedFile(filePath);
+        // if (workbenchStore.currentView.get() !== 'preview') {
+        //   console.log('[Workbench] File selected in editor, switching to preview tab.');
+        //   setSelectedView('preview');
+        // }
+      }, [setEditorSelectedFile]);
+
+      const onFileSave = useCallback(() => {
+        workbenchStore.saveCurrentDocument().catch(() => {
+          toast.error('Failed to update file content');
+        });
+      }, []);
+
+      const onFileReset = useCallback(() => {
+        workbenchStore.resetCurrentDocument();
+      }, []);
+
+      const handleSyncFiles = useCallback(async () => {
+        setIsSyncing(true);
+
+        try {
+          const directoryHandle = await window.showDirectoryPicker();
+          await workbenchStore.syncFiles(directoryHandle);
+          toast.success('Files synced successfully');
+        } catch (error) {
+          console.error('Error syncing files:', error);
+          toast.error('Failed to sync files');
+        } finally {
+          setIsSyncing(false);
+        }
+      }, []);
+
+      const handleSelectFile = useCallback((filePath: string) => {
+        workbenchStore.setSelectedFile(filePath);
+        workbenchStore.currentView.set('diff');
+      }, []);
+      const fileToUint8Array = (file:File):Promise<Uint8Array> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const arrayBuffer = e.target!.result as ArrayBuffer;
+            resolve(new Uint8Array(arrayBuffer));
+          };
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(file);
+        });
+      }
+      const handleIFrameMessage = (event:any) => {
+        const data = event.data as IFrameReplaceMessageData
+        console.log(data)
+        const msgType = data["msgType"]
+        if (msgType == undefined) {
+          return
+        }
+        if (msgType == "save") {
+          const newBodyInnerHTML = data.bodyInnerHTML;
+          const docFilePath = "/home/project" + new URL(data.baseURI).pathname;
+          var docContent = workbenchStore.getDocumentByFile(docFilePath).value
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(docContent, "text/html");
+          const bodyElement = xmlDoc.getElementsByTagName("body")[0];
+            bodyElement.innerHTML = newBodyInnerHTML;
+            console.log(bodyElement)
+          const serializer = new XMLSerializer();
+          docContent = serializer.serializeToString(xmlDoc);
+          workbenchStore.setDocumentContentByFile(docContent, docFilePath)
+          workbenchStore.saveFile(docFilePath)
+        }
+
+      };
+
+      // Revised useEffect to open index.html (checking public/index.html first, then index.html)
+      useEffect(() => {
+        console.log('[Workbench] DefaultFileEffect: Running. State:', {
+          propsChatStarted,
+          currentView: currentViewFromStore,
+          selectedFile: selectedFileFromStore,
+          initialFileOpened: initialFileOpened.current,
+          filesLoaded: files && Object.keys(files).length > 0,
+          publicIndexHtmlPath: 'public/index.html',
+          rootIndexHtmlPath: 'index.html',
+          publicIndexHtmlExists: files && files['public/index.html']?.type === 'file',
+          rootIndexHtmlExists: files && files['index.html']?.type === 'file'
+        });
+
+        if (
+          propsChatStarted &&
+          currentViewFromStore === 'code' &&
+          files && Object.keys(files).length > 0 &&
+          !initialFileOpened.current
+        ) {
+          console.log('[Workbench] DefaultFileEffect: Files are loaded. Available file paths:', Object.keys(files)); 
+          
+          let targetPathKey: string | null = null; 
+          const publicIndexHtmlMapKey = '/home/project/public/index.html';
+          const rootIndexHtmlMapKey = '/home/project/index.html';
+
+          if (files[publicIndexHtmlMapKey] && files[publicIndexHtmlMapKey]?.type === 'file') {
+            targetPathKey = publicIndexHtmlMapKey;
+          } else if (files[rootIndexHtmlMapKey] && files[rootIndexHtmlMapKey]?.type === 'file') {
+            targetPathKey = rootIndexHtmlMapKey;
+          }
+
+          if (targetPathKey) {
+            // let relativeTargetPath = targetPathKey; // No longer need to calculate relative path here for setSelectedFile
+            // const prefix = '/home/project/';
+            // if (targetPathKey.startsWith(prefix)) {
+            //   relativeTargetPath = targetPathKey.substring(prefix.length);
+            // }
+            
+            // selectedFileFromStore is the current value of the selectedFile atom (should also be a full key if set)
+            if (!selectedFileFromStore || selectedFileFromStore !== targetPathKey) {
+              console.log(`[Workbench] DefaultFileEffect: Conditions MET. Setting/Overriding selected file to KEY: '${targetPathKey}'. Current selected KEY: ${selectedFileFromStore}`);
+              workbenchStore.setSelectedFile(targetPathKey); // Use the full key from the files map
+            } else {
+              console.log(`[Workbench] DefaultFileEffect: Conditions MET, target KEY '${targetPathKey}' exists, and it's already selected. No action needed.`);
+            }
+          } else {
+            console.log('[Workbench] DefaultFileEffect: Conditions MET, but neither public nor root index.html found with expected keys. Keys inspected:', publicIndexHtmlMapKey, rootIndexHtmlMapKey);
+          }
+          
+          initialFileOpened.current = true;
+          console.log('[Workbench] DefaultFileEffect: initialFileOpened.current set to true.');
+
+        } else if (initialFileOpened.current) {
+          console.log('[Workbench] DefaultFileEffect: Initial attempt to open a default HTML file already done.');
+        } else {
+          let unmetConditions = [];
+          if (!propsChatStarted) unmetConditions.push('!propsChatStarted');
+          if (currentViewFromStore !== 'code') unmetConditions.push('currentView !== code');
+          if (!(files && Object.keys(files).length > 0)) unmetConditions.push('files not loaded');
+          console.log('[Workbench] DefaultFileEffect: Main conditions NOT MET. Unmet: ', unmetConditions.join(', ') || 'InitialFileOpened is true or other.');
+        }
+      }, [propsChatStarted, currentViewFromStore, files, selectedFileFromStore]);
+
+      // Temporary effect to log currentDocument when selectedFileFromStore changes
+      useEffect(() => {
+        const doc = workbenchStore.currentDocument.get();
+        const currentSelectedFile = workbenchStore.selectedFile.get(); // Get the latest from store
+        console.log('[Workbench] SelectedFile-Watcher: selectedFile in store is now:', currentSelectedFile, 'Current document from store:', doc);
+        if (doc) {
+          console.log('[Workbench] SelectedFile-Watcher: Document details:', { filePath: doc.filePath, valueExists: !!doc.value, first100Chars: doc.value?.substring(0, 100) + '...' });
+        }
+      }, [selectedFileFromStore]); // Trigger when selectedFileFromStore (derived from store) changes
+
+      return (
+        propsChatStarted && (
+          <motion.div
+            initial="closed"
+            animate={showWorkbench ? 'open' : 'closed'}
+            variants={workbenchVariants}
+            className="z-workbench h-full"
           >
-            <div className="absolute inset-0 h-full">
-              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
-                <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-2">
-                  <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
-                  <button
-                    className={classNames(
-                      'p-1.5 text-xs rounded-lg flex items-center gap-1 text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive',
-                      {
-                        'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent': showChat,
-                      }
+            <div
+              className={classNames(
+                'fixed inset-y-0 w-[var(--workbench-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
+                {
+                  'w-full': isSmallViewport,
+                  'left-0': showWorkbench && isSmallViewport,
+                  'left-[var(--workbench-left)]': showWorkbench,
+                  'left-[100%]': !showWorkbench,
+                },
+              )}
+            >
+              <div className="absolute inset-0 h-full">
+                <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
+                  <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-2">
+                    <Slider selected={currentViewFromStore} options={sliderOptions} setSelected={setSelectedView} />
+                    <button
+                      className={classNames(
+                        'p-1.5 text-xs rounded-lg flex items-center gap-1 text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive',
+                        {
+                          'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent': showChat,
+                        }
+                      )}
+                      onClick={() => {
+                        chatStore.setKey('showChat', !showChat);
+                      }}
+                      title={showChat ? "Hide Chat Panel" : "Show Chat Panel"}
+                    >
+                      <div className="i-bolt:chat text-base" />
+                    </button>
+                    <div className="ml-auto" />
+                    {currentViewFromStore === 'code' && (
+                      <DeployButton />
                     )}
-                    onClick={() => {
-                      chatStore.setKey('showChat', !showChat);
-                    }}
-                    title={showChat ? "Hide Chat Panel" : "Show Chat Panel"}
-                  >
-                    <div className="i-bolt:chat text-base" />
-                  </button>
-                  <div className="ml-auto" />
-                  {selectedView === 'code' && (
-                    <DeployButton />
-                  )}
-                  {selectedView === 'code' && (
-                    <div className="flex overflow-y-auto items-center">
-                      <PanelHeaderButton
-                        className="text-sm"
-                        onClick={() => {
-                          workbenchStore.downloadZip();
-                        }}
-                      >
-                        <div className="i-ph:code" />
-                        下载模板文件
-                      </PanelHeaderButton>
-                    </div>
-                  )}
-                  {selectedView === 'diff' && (
-                    <FileModifiedDropdown fileHistory={fileHistory} onSelectFile={handleSelectFile} />
-                  )}
-                </div>
-                <div className="relative flex-1 overflow-hidden">
-                  <View initial={{ x: '0%' }} animate={{ x: selectedView === 'code' ? '0%' : '-100%' }}>
-                    <EditorPanel
-                      editorDocument={currentDocument}
-                      isStreaming={isStreaming}
-                      selectedFile={selectedFile}
-                      files={files}
-                      unsavedFiles={unsavedFiles}
-                      fileHistory={fileHistory}
-                      onFileSelect={onFileSelect}
-                      onEditorScroll={onEditorScroll}
-                      onEditorChange={onEditorChange}
-                      onFileSave={onFileSave}
-                      onFileReset={onFileReset}
-                    />
-                  </View>
-                  <View
-                    initial={{ x: '100%' }}
-                    animate={{ x: selectedView === 'diff' ? '0%' : selectedView === 'code' ? '100%' : '-100%' }}
-                  >
-                    <DiffView fileHistory={fileHistory} setFileHistory={setFileHistory} actionRunner={actionRunner} />
-                  </View>
-                  <View initial={{ x: '100%' }} animate={{ x: selectedView === 'preview' ? '0%' : '100%' }}>
-                    <Preview 
-                        editorSelectedFile={editorSelectedFile}
-                        chatStarted={chatStarted}
-                    />
-                  </View>
+                    {currentViewFromStore === 'code' && (
+                      <div className="flex overflow-y-auto items-center">
+                        <PanelHeaderButton
+                          className="text-sm"
+                          onClick={() => {
+                            workbenchStore.downloadZip();
+                          }}
+                        >
+                          <div className="i-ph:code" />
+                          下载模板文件
+                        </PanelHeaderButton>
+                      </div>
+                    )}
+                    {currentViewFromStore === 'diff' && (
+                      <FileModifiedDropdown fileHistory={fileHistory} onSelectFile={handleSelectFile} />
+                    )}
+                  </div>
+                  <div className="relative flex-1 overflow-hidden">
+                    <View initial={{ x: '0%' }} animate={{ x: currentViewFromStore === 'code' ? '0%' : '-100%' }}>
+                      <EditorPanel
+                        editorDocument={currentDocument}
+                        isStreaming={isStreaming}
+                        selectedFile={selectedFileFromStore}
+                        files={files}
+                        unsavedFiles={unsavedFiles}
+                        fileHistory={fileHistory}
+                        onFileSelect={onFileSelect}
+                        onEditorScroll={onEditorScroll}
+                        onEditorChange={onEditorChange}
+                        onFileSave={onFileSave}
+                        onFileReset={onFileReset}
+                      />
+                    </View>
+                    <View
+                      initial={{ x: '100%' }}
+                      animate={{ x: currentViewFromStore === 'diff' ? '0%' : currentViewFromStore === 'code' ? '100%' : '-100%' }}
+                    >
+                      <DiffView fileHistory={fileHistory} setFileHistory={setFileHistory} actionRunner={actionRunner} />
+                    </View>
+                    <View initial={{ x: '100%' }} animate={{ x: currentViewFromStore === 'preview' ? '0%' : '100%' }}>
+                      <Preview 
+                          editorSelectedFile={editorSelectedFile}
+                          chatStarted={propsChatStarted}
+                      />
+                    </View>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <PushToGitHubDialog
-            isOpen={isPushDialogOpen}
-            onClose={() => setIsPushDialogOpen(false)}
-            onPush={async (repoName, username, token) => {
-              try {
-                const commitMessage = prompt('Please enter a commit message:', 'Initial commit') || 'Initial commit';
-                await workbenchStore.pushToGitHub(repoName, commitMessage, username, token);
+            <PushToGitHubDialog
+              isOpen={isPushDialogOpen}
+              onClose={() => setIsPushDialogOpen(false)}
+              onPush={async (repoName, username, token) => {
+                try {
+                  const commitMessage = prompt('Please enter a commit message:', 'Initial commit') || 'Initial commit';
+                  await workbenchStore.pushToGitHub(repoName, commitMessage, username, token);
 
-                const repoUrl = `https://github.com/${username}/${repoName}`;
+                  const repoUrl = `https://github.com/${username}/${repoName}`;
 
-                if (updateChatMestaData && !metadata?.gitUrl) {
-                  updateChatMestaData({
-                    ...(metadata || {}),
-                    gitUrl: repoUrl,
-                  });
+                  if (updateChatMestaData && !metadata?.gitUrl) {
+                    updateChatMestaData({
+                      ...(metadata || {}),
+                      gitUrl: repoUrl,
+                    });
+                  }
+
+                  return repoUrl;
+                } catch (error) {
+                  console.error('Error pushing to GitHub:', error);
+                  toast.error('Failed to push to GitHub');
+                  throw error;
                 }
+              }}
+            />
 
-                return repoUrl;
-              } catch (error) {
-                console.error('Error pushing to GitHub:', error);
-                toast.error('Failed to push to GitHub');
-                throw error;
-              }
-            }}
-          />
-
-        </motion.div>
-      )
-    );
-  },
-);
+          </motion.div>
+        )
+      );
+    },
+  );
 
 // View component for rendering content with motion transitions
 interface ViewProps extends HTMLMotionProps<'div'> {
