@@ -831,7 +831,7 @@ export const Preview = memo((props: PreviewDialogProps) => {
               }
             }
           }}
-          className="flex-1 px-2 py-1 text-xs rounded bg-bolt-elements-background-depth-2 border border-transparent focus:border-accent-500 focus:ring-accent-500/50 outline-none"
+          className="flex-1 mr-5 px-2 py-1 text-xs rounded bg-bolt-elements-background-depth-2 border border-transparent focus:border-accent-500 focus:ring-accent-500/50 outline-none"
           placeholder={t('preview.addressBarPlaceholder') ?? "Enter URL..."}
         />
         <IconButton
@@ -841,6 +841,13 @@ export const Preview = memo((props: PreviewDialogProps) => {
           disabled={!iframeUrl || previewLoadingState === 'loading'}
         >
           <div className="i-ph:arrow-clockwise" />
+        </IconButton>
+        <IconButton
+          title={isEditModeOn ? (t('preview.exitEditMode') ?? "Exit Edit Mode") : (t('preview.enterEditMode') ?? "Enter Edit Mode")}
+          onClick={toggleEditMode}
+          className={`text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundHover ${isEditModeOn ? "bg-bolt-elements-item-backgroundActive text-accent-500" : ""}`}
+        >
+          {isEditModeOn ? <div className="i-ph:eye-slash-fill" /> : <div className="i-ph:pencil-simple" />}
         </IconButton>
         <IconButton
           title={t('preview.openInNewTab') ?? "Open in new tab"}
