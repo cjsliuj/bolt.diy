@@ -216,11 +216,11 @@
  * Hierarchy: Element Token -> (Element Token | Color Tokens) -> Primitives
  */
 :root {
-  --header-height: 54px;
-  --chat-max-width: 37rem;
-  --chat-min-width: 640px;
+  --header-height: 60px;
+  --chat-max-width: 30rem;
+  --chat-min-width: 520px;
   --workbench-width: min(calc(100% - var(--chat-min-width)), 2536px);
-  --workbench-inner-width: var(--workbench-width);
+  --workbench-inner-width: calc(var(--workbench-width) - 2rem);
   --workbench-left: calc(100% - var(--workbench-width));
 
   /* Toasts */

@@ -322,7 +322,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       >
         <ClientOnly>{() => <Menu />}</ClientOnly>
         <div ref={scrollRef} className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
-          <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
+          <div className={classNames(styles.Chat, 'flex flex-col w-[var(--workbench-left)] lg:min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
               <div id="intro" className="mt-[16vh] max-w-chat mx-auto text-center px-4 lg:px-0">
                 <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
@@ -334,7 +334,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               </div>
             )}
             <div
-              className={classNames('pt-6 px-2 sm:px-6', {
+              className={classNames('pt-6 px-[5px]', {
                 'h-full flex flex-col': chatStarted,
               })}
               ref={scrollRef}
@@ -362,7 +362,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 />
               )}
               <div
-                className={classNames('flex flex-col gap-4 w-full max-w-chat mx-auto z-prompt mb-6', {
+                className={classNames('flex flex-col gap-2 w-full max-w-chat mx-auto z-prompt mb-6', {
                   'sticky bottom-2': chatStarted,
                 })}
               >
@@ -381,13 +381,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 {progressAnnotations && <ProgressCompilation data={progressAnnotations} />}
                 <div
                   className={classNames(
-                    'bg-bolt-elements-background-depth-2 p-3 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
-
-                    /*
-                     * {
-                     *   'sticky bottom-2': chatStarted,
-                     * },
-                     */
+                    'bg-bolt-elements-background-depth-2 p-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
                   )}
                 >
                   <svg className={classNames(styles.PromptEffectContainer)}>
@@ -560,10 +554,10 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         />
                       )}
                     </ClientOnly>
-                    <div className="flex justify-between items-center text-sm p-4 pt-2">
-                      <div className="flex gap-1 items-center">
+                    <div className="flex justify-between items-center text-sm p-1 pt-1 flex-wrap">
+                      <div className="flex gap-0.5 items-center flex-wrap">
                         <IconButton title={t('chat.uploadFile')} className="transition-all" onClick={() => handleFileUpload()}>
-                          <div className="i-ph:paperclip text-xl"></div>
+                          <div className="i-ph:paperclip text-lg"></div>
                         </IconButton>
                         <IconButton
                           title="Enhance prompt"
@@ -575,9 +569,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           }}
                         >
                           {enhancingPrompt ? (
-                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
+                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-lg animate-spin"></div>
                           ) : (
-                            <div className="i-bolt:stars text-xl"></div>
+                            <div className="i-bolt:stars text-lg"></div>
                           )}
                         </IconButton>
 
@@ -599,7 +593,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           onClick={() => setIsModelSettingsCollapsed(!isModelSettingsCollapsed)}
                           disabled={!providerList || providerList.length === 0}
                         >
-                          <div className={`i-ph:caret-${isModelSettingsCollapsed ? 'right' : 'down'} text-lg`} />
+                          <div className={`i-ph:caret-${isModelSettingsCollapsed ? 'right' : 'down'} text-base`} />
                           {isModelSettingsCollapsed ? <span className="text-xs">{model}</span> : <span />}
                         </IconButton>
                       </div>

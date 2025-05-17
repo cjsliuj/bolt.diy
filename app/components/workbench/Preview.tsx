@@ -68,6 +68,7 @@ export const Preview = memo((props: PreviewDialogProps) => {
   const [url, setUrl] = useState('');
   const [iframeUrl, setIframeUrl] = useState<string | undefined>();
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [previewLoadingState, setPreviewLoadingState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   // Toggle between responsive mode and device mode
   const [isDeviceModeOn, setIsDeviceModeOn] = useState(false);
@@ -95,28 +96,150 @@ export const Preview = memo((props: PreviewDialogProps) => {
   const [showDeviceFrame, setShowDeviceFrame] = useState(true);
   const [showDeviceFrameInPreview, setShowDeviceFrameInPreview] = useState(false);
 
+  // Effect for activePreview changes
   useEffect(() => {
-    if (props.editorSelectedFile === undefined) {
-      return;
-    }
-    if (!props.editorSelectedFile.toLowerCase().endsWith("html")) {
-      return;
-    }
-    const path = props.editorSelectedFile.replace("/home/project/public", "");
-    const preiwUrl = url + path;
-    setIframeUrl(preiwUrl);
-  }, [props.editorSelectedFile]);
-  useEffect(() => {
-    if (!activePreview) {
-      setUrl('');
-      setIframeUrl(undefined);
-      return;
+    console.log('[Preview activePreviewEffect] Running. activePreview (raw):', activePreview, 'editorSelectedFile:', props.editorSelectedFile);
+    try {
+      console.log('[Preview activePreviewEffect] activePreview (stringified):', activePreview ? JSON.stringify(activePreview) : 'null/undefined');
+    } catch (e) {
+      console.warn('[Preview activePreviewEffect] Could not stringify activePreview:', e);
     }
 
+    if (!activePreview) {
+      setUrl('');
+      setIframeUrl(undefined); 
+      console.log('[Preview activePreviewEffect] No activePreview. Cleared iframeUrl.');
+      return;
+    }
     const { baseUrl } = activePreview;
     setUrl(baseUrl);
-    setIframeUrl(baseUrl);
-  }, [activePreview]);
+    let finalIframeUrl: string | undefined = undefined;
+    if (props.editorSelectedFile && props.editorSelectedFile.toLowerCase().endsWith("html") && baseUrl) {
+      const path = props.editorSelectedFile.replace("/home/project/public", "");
+      finalIframeUrl = baseUrl + path;
+    } else if (baseUrl) {
+      finalIframeUrl = baseUrl;
+    } else {
+      finalIframeUrl = undefined;
+    }
+    console.log('[Preview activePreviewEffect] Setting iframeUrl to:', finalIframeUrl);
+    setIframeUrl(finalIframeUrl);
+  }, [activePreview, props.editorSelectedFile]);
+
+  // Effect for iframeUrl changes (to set loading state)
+  useEffect(() => {
+    console.log('[Preview iframeUrlEffect] Running. iframeUrl:', iframeUrl, 'current loadingState:', previewLoadingState);
+    if (iframeUrl) {
+      console.log('[Preview iframeUrlEffect] iframeUrl changed, setting state to loading:', iframeUrl);
+      setPreviewLoadingState('loading');
+    } else {
+      // If iframeUrl is cleared (e.g., no active preview)
+      // and we are not in a persistent error state, then go to idle.
+      if (previewLoadingState !== 'error') {
+        console.log('[Preview] iframeUrl cleared, not in error state. Setting to idle.');
+        setPreviewLoadingState('idle');
+      }
+      // If previewLoadingState IS 'error', we want to keep showing the error message.
+    }
+  }, [iframeUrl]); // Only depends on iframeUrl
+
+  // Effect for props.editorSelectedFile changes (specific handling for HTML files)
+  useEffect(() => {
+    console.log('[Preview editorSelectedFileEffect] Running. editorSelectedFile:', props.editorSelectedFile, 'current base url (state):', url, 'current iframeUrl:', iframeUrl);
+    if (props.editorSelectedFile && props.editorSelectedFile.toLowerCase().endsWith("html")) {
+      if (url) { 
+        const path = props.editorSelectedFile.replace("/home/project/public", "");
+        const newIframeUrl = url + path;
+        if (iframeUrl !== newIframeUrl) {
+          console.log('[Preview] HTML file selected, updating iframeUrl to:', newIframeUrl);
+          setIframeUrl(newIframeUrl); // This will trigger loading sequence via the [iframeUrl] useEffect
+        }
+      }
+      // If no `url` (no activePreview), do nothing here; activePreview effect will handle clearing.
+    } else if (props.editorSelectedFile) {
+      // A non-HTML file is selected. For now, we don't clear the preview, 
+      // allowing the last valid HTML preview (or its error state) to persist.
+      // If a different behavior is desired, iframeUrl could be set to undefined here.
+      console.log('[Preview] Non-HTML file selected:', props.editorSelectedFile);
+    }
+  }, [props.editorSelectedFile, url, iframeUrl]); // url and iframeUrl are needed for comparison and construction
+
+
+  // Effect for attaching iframe event listeners
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (iframe && previewLoadingState === 'loading' && iframeUrl) {
+      console.log('[Preview] Attaching load/error listeners to iframe for src:', iframeUrl);
+      let hasHandledEvent = false;
+
+      const normalizeUrl = (url: string | undefined | null): string => {
+        if (!url) return '';
+        return url.endsWith('/') ? url.slice(0, -1) : url;
+      };
+
+      const handleLoad = () => {
+        if (hasHandledEvent) return;
+        
+        const currentSrcNormalized = normalizeUrl(iframeRef.current?.src);
+        const expectedSrcNormalized = normalizeUrl(iframeUrl);
+
+        if (iframeRef.current && currentSrcNormalized === expectedSrcNormalized) {
+          console.log('[Preview] iframe loaded successfully (after normalization): current normalized:', currentSrcNormalized, 'expected normalized:', expectedSrcNormalized);
+          setPreviewLoadingState('success');
+          hasHandledEvent = true;
+        } else {
+          console.warn('[Preview] iframe loaded, but src mismatch or unexpected load. Normalized Current:',
+            currentSrcNormalized, 'Normalized Expected:', expectedSrcNormalized, 
+            'Raw Current:', iframeRef.current?.src, 'Raw Expected:', iframeUrl);
+          // Do not set to success if it's not the URL we expect, as it might be an error page or redirect.
+          // If it's a legitimate redirect that should be considered success, this logic needs refinement.
+        }
+      };
+
+      const handleError = () => {
+        if (hasHandledEvent) return;
+        // Ensure error is for the src we tried to load.
+        console.error('[Preview] iframe failed to load:', iframeUrl);
+        setPreviewLoadingState('error');
+        hasHandledEvent = true;
+      };
+
+      iframe.addEventListener('load', handleLoad);
+      iframe.addEventListener('error', handleError);
+
+      // If the iframe's current src is different from the intended iframeUrl, update it.
+      // This ensures that if iframeUrl changed, the src is definitely set.
+      if (iframe.src !== iframeUrl) {
+        console.log('[Preview] iframe src (', iframe.src, ') differs from iframeUrl (', iframeUrl, '). Setting src.');
+        iframe.src = iframeUrl;
+      } else {
+        // If src is already set, some browsers might not re-trigger load/error if content is cached or unchanged.
+        // A forced reload might be needed if we suspect this. For now, assume events will fire.
+      }
+
+      return () => {
+        console.log('[Preview] Cleaning up iframe listeners for:', iframeUrl);
+        iframe.removeEventListener('load', handleLoad);
+        iframe.removeEventListener('error', handleError);
+      };
+    }
+  }, [previewLoadingState, iframeUrl]); // Depends on loading state and the URL itself
+
+  const reloadPreview = () => {
+    if (iframeRef.current && iframeUrl) {
+      console.log('[Preview] Reloading preview for:', iframeUrl);
+      setPreviewLoadingState('loading'); // Set to loading before attempting reload
+      // Force reload by changing src slightly or re-assigning
+      const currentIframeSrc = iframeRef.current.src;
+      iframeRef.current.src = ''; // Attempt to clear it first
+      // A small delay might help some browsers process the src change properly before re-assigning
+      setTimeout(() => {
+          if (iframeRef.current) iframeRef.current.src = iframeUrl; 
+      }, 0);
+    } else {
+      console.log('[Preview] Reload requested, but no iframeUrl or iframeRef.');
+    }
+  };
 
   const validateUrl = useCallback(
     (value: string) => {
@@ -150,12 +273,6 @@ export const Preview = memo((props: PreviewDialogProps) => {
       setActivePreviewIndex(minPortIndex);
     }
   }, [previews, findMinPortIndex]);
-
-  const reloadPreview = () => {
-    if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src;
-    }
-  };
 
   const toggleFullscreen = async () => {
     if (!isFullscreen && containerRef.current) {
@@ -968,7 +1085,7 @@ export const Preview = memo((props: PreviewDialogProps) => {
                         width: isLandscape ? `${selectedWindowSize.height}px` : `${selectedWindowSize.width}px`,
                         height: isLandscape ? `${selectedWindowSize.width}px` : `${selectedWindowSize.height}px`,
                         background: 'white',
-                        display: 'block',
+                        display: previewLoadingState === 'success' || previewLoadingState === 'idle' ? 'block' : 'none',
                       }}
                       src={iframeUrl}
                       sandbox="allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation allow-same-origin"
@@ -991,6 +1108,22 @@ export const Preview = memo((props: PreviewDialogProps) => {
                 setIsSelectionMode={setIsSelectionMode}
                 containerRef={iframeRef}
               />
+              {previewLoadingState === 'loading' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white text-gray-700 z-10">
+                  正在加载页面内容...
+                </div>
+              )}
+              {previewLoadingState === 'error' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white text-red-500 p-4 text-center z-10">
+                  <p className="mb-2">加载失败，请重试。</p>
+                  <button
+                    onClick={reloadPreview}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  >
+                    重试
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex w-full h-full justify-center items-center bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary">

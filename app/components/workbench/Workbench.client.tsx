@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
 import { computed } from 'nanostores';
-import { memo, useCallback, useEffect, useState, useMemo,  useRef, type ChangeEvent } from 'react';
+import { memo, useCallback, useEffect, useState, useMemo,  useRef } from 'react';
 import { toast } from 'react-toastify';
 import { Popover, Transition } from '@headlessui/react';
 import { diffLines, type Change } from 'diff';
@@ -13,10 +13,10 @@ import {
   type OnChangeCallback as OnEditorChange,
   type OnScrollCallback as OnEditorScroll,
 } from '~/components/editor/codemirror/CodeMirrorEditor';
-import { IconButton } from '~/components/ui/IconButton';
 import { PanelHeaderButton } from '~/components/ui/PanelHeaderButton';
 import { Slider, type SliderOptions } from '~/components/ui/Slider';
 import { workbenchStore, type WorkbenchViewType } from '~/lib/stores/workbench';
+import { chatStore } from '~/lib/stores/chat';
 import { classNames } from '~/utils/classNames';
 import { cubicEasingFn } from '~/utils/easings';
 import { renderLogger } from '~/utils/logger';
@@ -25,6 +25,7 @@ import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
 import { PushToGitHubDialog } from '~/components/@settings/tabs/connections/components/PushToGitHubDialog';
 import type { IFrameReplaceMessageData } from './IFrameMessage';
+import { DeployButton } from '~/components/header/DeployButton.client';
 
 interface WorkspaceProps {
   chatStarted?: boolean;
@@ -279,27 +280,31 @@ const FileModifiedDropdown = memo(
 export const Workbench = memo(
   ({ chatStarted, isStreaming, actionRunner, metadata, updateChatMestaData }: WorkspaceProps) => {
     renderLogger.trace('Workbench');
+    const initialPreviewSet = useRef(false);
+    const automaticViewCorrectionDone = useRef(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isPushDialogOpen, setIsPushDialogOpen] = useState(false);
-    const [isInputDialogOpen, setIsInputDialogOpen] = useState(false);
-    const [inpuDialogDefaultValue, setInpuDialogDefaultValue] = useState("")
     const [fileHistory, setFileHistory] = useState<Record<string, FileHistory>>({});
-    const [iframeReplaceMessageData, setIframeReplaceMessageData] = useState<IFrameReplaceMessageData>();
-    // const modifiedFiles = Array.from(useStore(workbenchStore.unsavedFiles).keys());
     const [editorSelectedFile, setEditorSelectedFile] = useState<string|undefined>("");
     const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
     const showWorkbench = useStore(workbenchStore.showWorkbench);
+    const { showChat } = useStore(chatStore);
     const selectedFile = useStore(workbenchStore.selectedFile);
     const currentDocument = useStore(workbenchStore.currentDocument);
     const unsavedFiles = useStore(workbenchStore.unsavedFiles);
     const files = useStore(workbenchStore.files);
     const selectedView = useStore(workbenchStore.currentView);
 
+    console.log('[Workbench] Rendering with selectedView from store:', selectedView);
+
     const isSmallViewport = useViewport(1024);
 
     const setSelectedView = (view: WorkbenchViewType) => {
+      console.log(`[Workbench] setSelectedView called with: ${view}. Current store value before set: ${workbenchStore.currentView.get()}`);
       workbenchStore.currentView.set(view);
+      console.log(`[Workbench] Store value after set: ${workbenchStore.currentView.get()}`);
     };
+
     useEffect(() => {
       workbenchStore.toggleTerminal(false);
 
@@ -310,12 +315,68 @@ export const Workbench = memo(
 
     }, []);
 
-
     useEffect(() => {
-      if (hasPreview) {
-        setSelectedView('preview');
+      const currentViewActual = workbenchStore.currentView.get();
+      const filesFromStore = workbenchStore.files.get();
+
+      let filesArePopulated = false;
+      let filesLengthForLog = -1;
+      if (Array.isArray(filesFromStore)) {
+        filesArePopulated = filesFromStore.length > 0;
+        filesLengthForLog = filesFromStore.length;
+      } else if (typeof filesFromStore === 'object' && filesFromStore !== null) {
+        filesArePopulated = Object.keys(filesFromStore).length > 0;
+        filesLengthForLog = Object.keys(filesFromStore).length;
       }
-    }, [hasPreview]);
+
+      console.log(
+        '[Workbench InitialSwitchEffectRevised v4.1] Running.', {
+          chatStarted,
+          initialPreviewSet: initialPreviewSet.current,
+          automaticViewCorrectionDone: automaticViewCorrectionDone.current,
+          currentViewActual,
+          hasPreview, 
+          filesArePopulated,
+          filesLengthForLog
+        }
+      );
+
+      if (chatStarted && !initialPreviewSet.current) {
+        // Phase 1: Initial switch to preview
+        if (currentViewActual !== 'preview') {
+          console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 1: Initial switch. Setting to preview.');
+          setSelectedView('preview');
+        }
+        initialPreviewSet.current = true;
+      } else if (chatStarted && initialPreviewSet.current && !automaticViewCorrectionDone.current) {
+        // Phase 2: Try to keep view on 'preview' until files are populated and view is stable.
+        if (currentViewActual === 'code') {
+          console.warn('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is "code". Re-asserting "preview".');
+          setSelectedView('preview');
+          if (filesArePopulated) {
+            console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: Switched from code to preview, files populated. Marking correction done.');
+            automaticViewCorrectionDone.current = true;
+          } else {
+            console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: Switched from code to preview, but files NOT yet populated. Correction NOT marked done.');
+          }
+        } else if (currentViewActual === 'preview' && filesArePopulated) {
+          console.log('[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is "preview" and files populated. Marking correction done.');
+          automaticViewCorrectionDone.current = true;
+        } else {
+          console.log(`[Workbench InitialSwitchEffectRevised v4.1] Phase 2: View is "${currentViewActual}", filesPopulated: ${filesArePopulated}. No state change or conditions not met for marking done.`);
+        }
+      } else {
+        let reason = "Automatic switching phases complete or conditions not met.";
+        if (!chatStarted) {
+            reason = "chatStarted is false.";
+        } else if (!initialPreviewSet.current) {
+            reason = "Phase 1 (initial preview set) not yet done.";
+        } else if (automaticViewCorrectionDone.current) {
+            reason = "All automatic view control phases (initial set & one-time correction) are done.";
+        }
+        console.log(`[Workbench InitialSwitchEffectRevised v4.1] No automatic switching action. Reason: ${reason} Current view: ${currentViewActual}`);
+      }
+    }, [chatStarted, hasPreview, files, setSelectedView]);
 
     useEffect(() => {
       workbenchStore.setDocuments(files);
@@ -332,8 +393,11 @@ export const Workbench = memo(
     const onFileSelect = useCallback((filePath: string | undefined) => {
       workbenchStore.setSelectedFile(filePath);
       setEditorSelectedFile(filePath);
-      setSelectedView('preview')
-    }, []);
+      // if (workbenchStore.currentView.get() !== 'preview') {
+      //   console.log('[Workbench] File selected in editor, switching to preview tab.');
+      //   setSelectedView('preview');
+      // }
+    }, [setEditorSelectedFile]);
 
     const onFileSave = useCallback(() => {
       workbenchStore.saveCurrentDocument().catch(() => {
@@ -405,12 +469,11 @@ export const Workbench = memo(
           initial="closed"
           animate={showWorkbench ? 'open' : 'closed'}
           variants={workbenchVariants}
-          className="z-workbench"
+          className="z-workbench h-full"
         >
-
           <div
             className={classNames(
-              'fixed top-[calc(var(--header-height)+1.5rem)] bottom-6 w-[var(--workbench-inner-width)] mr-4 z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
+              'fixed inset-y-0 w-[var(--workbench-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
               {
                 'w-full': isSmallViewport,
                 'left-0': showWorkbench && isSmallViewport,
@@ -419,15 +482,32 @@ export const Workbench = memo(
               },
             )}
           >
-            <div className="absolute inset-0 px-2 lg:px-6">
+            <div className="absolute inset-0 h-full">
               <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
-                <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor">
+                <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-2">
                   <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
+                  <button
+                    className={classNames(
+                      'p-1.5 text-xs rounded-lg flex items-center gap-1 text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive',
+                      {
+                        'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent': showChat,
+                      }
+                    )}
+                    onClick={() => {
+                      chatStore.setKey('showChat', !showChat);
+                    }}
+                    title={showChat ? "Hide Chat Panel" : "Show Chat Panel"}
+                  >
+                    <div className="i-bolt:chat text-base" />
+                  </button>
                   <div className="ml-auto" />
                   {selectedView === 'code' && (
-                    <div className="flex overflow-y-auto">
+                    <DeployButton />
+                  )}
+                  {selectedView === 'code' && (
+                    <div className="flex overflow-y-auto items-center">
                       <PanelHeaderButton
-                        className="mr-1 text-sm"
+                        className="text-sm"
                         onClick={() => {
                           workbenchStore.downloadZip();
                         }}
@@ -435,36 +515,11 @@ export const Workbench = memo(
                         <div className="i-ph:code" />
                         下载模板文件
                       </PanelHeaderButton>
-                      {/*<PanelHeaderButton className="mr-1 text-sm" onClick={handleSyncFiles} disabled={isSyncing}>*/}
-                      {/*  {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:cloud-arrow-down" />}*/}
-                      {/*  {isSyncing ? 'Syncing...' : 'Sync Files'}*/}
-                      {/*</PanelHeaderButton>*/}
-                      {/*<PanelHeaderButton*/}
-                      {/*  className="mr-1 text-sm"*/}
-                      {/*  onClick={() => {*/}
-                      {/*    workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());*/}
-                      {/*  }}*/}
-                      {/*>*/}
-                      {/*  <div className="i-ph:terminal" />*/}
-                      {/*  Toggle Terminal*/}
-                      {/*</PanelHeaderButton>*/}
-                      {/*<PanelHeaderButton className="mr-1 text-sm" onClick={() => setIsPushDialogOpen(true)}>*/}
-                      {/*  <div className="i-ph:git-branch" />*/}
-                      {/*  Push to GitHub*/}
-                      {/*</PanelHeaderButton>*/}
                     </div>
                   )}
                   {selectedView === 'diff' && (
                     <FileModifiedDropdown fileHistory={fileHistory} onSelectFile={handleSelectFile} />
                   )}
-                  {/*<IconButton*/}
-                  {/*  icon="i-ph:x-circle"*/}
-                  {/*  className="-mr-1"*/}
-                  {/*  size="xl"*/}
-                  {/*  onClick={() => {*/}
-                  {/*    workbenchStore.showWorkbench.set(false);*/}
-                  {/*  }}*/}
-                  {/*/>*/}
                 </div>
                 <div className="relative flex-1 overflow-hidden">
                   <View initial={{ x: '0%' }} animate={{ x: selectedView === 'code' ? '0%' : '-100%' }}>
