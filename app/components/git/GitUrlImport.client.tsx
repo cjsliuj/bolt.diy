@@ -10,6 +10,10 @@ import { useChatHistory } from '~/lib/persistence';
 import { createCommandsMessage, detectProjectCommands, escapeBoltTags } from '~/utils/projectCommands';
 import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
 import { toast } from 'react-toastify';
+import { Button } from '~/components/ui/Button';
+import { Input } from '~/components/ui/Input';
+import { useChatManager } from '~/lib/hooks/useChatManager';
+import { useTranslation } from 'react-i18next';
 
 const IGNORE_PATTERNS = [
   'node_modules/**',
@@ -41,6 +45,11 @@ export function GitUrlImport() {
   const { ready: gitReady, gitClone } = useGit();
   const [imported, setImported] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { chatHistoryActions } = useChatManager();
+  const { t } = useTranslation();
 
   const importRepo = async (repoUrl?: string) => {
     if (!gitReady && !historyReady) {
@@ -94,7 +103,7 @@ ${escapeBoltTags(file.content)}
             messages.push({
               role: 'user',
               id: generateId(),
-              content: 'Setup the codebase and Start the application',
+              content: t('systemMessages.setupAndStartAppUser', 'Setup the codebase and Start the application'),
             });
             messages.push(commandsMessage);
           }

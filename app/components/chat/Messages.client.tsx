@@ -12,6 +12,7 @@ import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
 import { forwardRef } from 'react';
 import type { ForwardedRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface MessagesProps {
   id?: string;
@@ -25,6 +26,7 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
     const { id, isStreaming = false, messages = [] } = props;
     const location = useLocation();
     const profile = useStore(profileStore);
+    const { t } = useTranslation();
 
     const handleRewind = (messageId: string) => {
       const searchParams = new URLSearchParams(location.search);
@@ -95,7 +97,7 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
                   {!isUserMessage && (
                     <div className="flex gap-2 flex-col lg:flex-row">
                       {messageId && (
-                        <WithTooltip tooltip="Revert to this message">
+                        <WithTooltip tooltip={t('chat.messages.revertToThisMessage', 'Revert to this message')}>
                           <button
                             onClick={() => handleRewind(messageId)}
                             key="i-ph:arrow-u-up-left"
@@ -107,7 +109,7 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
                         </WithTooltip>
                       )}
 
-                      <WithTooltip tooltip="Fork chat from this message">
+                      <WithTooltip tooltip={t('chat.messages.forkChatFromThisMessage', 'Fork chat from this message')}>
                         <button
                           onClick={() => handleFork(messageId)}
                           key="i-ph:git-fork"

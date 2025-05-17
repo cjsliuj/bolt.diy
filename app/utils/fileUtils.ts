@@ -1,4 +1,5 @@
 import ignore from 'ignore';
+import i18n from '~/i18n';
 
 // Common patterns to ignore, similar to .gitignore
 export const IGNORE_PATTERNS = [
@@ -97,7 +98,9 @@ export const detectProjectType = async (
       return {
         type: 'Node.js',
         setupCommand: `npm install && npm run ${availableCommand}`,
-        followupMessage: `Found "${availableCommand}" script in package.json. Running "npm run ${availableCommand}" after installation.`,
+        followupMessage: i18n.t('systemMessages.foundScriptAndRunning',
+          'Found "{{scriptName}}" script in package.json. Running "npm run {{scriptName}}" after installation.',
+          { scriptName: availableCommand }),
       };
     }
 
@@ -105,7 +108,7 @@ export const detectProjectType = async (
       type: 'Node.js',
       setupCommand: 'npm install',
       followupMessage:
-        'Would you like me to inspect package.json to determine the available scripts for running this project?',
+        i18n.t('systemMessages.packageJsonInspectPrompt', 'Would you like me to inspect package.json to determine the available scripts for running this project?'),
     };
   }
 

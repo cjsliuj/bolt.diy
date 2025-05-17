@@ -4,12 +4,14 @@
  */
 import { MODEL_REGEX, PROVIDER_REGEX } from '~/utils/constants';
 import { Markdown } from './Markdown';
+import { useTranslation } from 'react-i18next';
 
 interface UserMessageProps {
   content: string | Array<{ type: string; text?: string; image?: string }>;
 }
 
 export function UserMessage({ content }: UserMessageProps) {
+  const { t } = useTranslation();
   if (Array.isArray(content)) {
     const textItem = content.find((item) => item.type === 'text');
     const textContent = stripMetadata(textItem?.text || '');
@@ -23,7 +25,7 @@ export function UserMessage({ content }: UserMessageProps) {
             <img
               key={index}
               src={item.image}
-              alt={`Image ${index + 1}`}
+              alt={t('chat.messages.imageAlt', 'Image {{index}}', { index: index + 1 })}
               className="max-w-full h-auto rounded-lg"
               style={{ maxHeight: '512px', objectFit: 'contain' }}
             />

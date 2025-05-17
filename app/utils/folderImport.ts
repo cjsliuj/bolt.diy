@@ -1,6 +1,7 @@
 import type { Message } from 'ai';
 import { generateId } from './fileUtils';
 import { detectProjectCommands, createCommandsMessage, escapeBoltTags } from './projectCommands';
+import i18n from '~/i18n';
 
 
 export const createChatFromFileArtifacts = async (
@@ -12,15 +13,16 @@ export const createChatFromFileArtifacts = async (
   const commands = await detectProjectCommands(fileArtifacts);
   const commandsMessage = createCommandsMessage(commands);
 
-  const binaryFilesMessage =
+  const binaryFilesDetails =
     binaryFiles.length > 0
-      ? `\n\nSkipped ${binaryFiles.length} binary files:\n${binaryFiles.map((f) => `- ${f}`).join('\n')}`
+      ? i18n.t('systemMessages.skippedBinaryFilesList', { count: binaryFiles.length, fileList: binaryFiles.map((f) => `- ${f}`).join('\n') })
       : '';
 
   const filesMessage: Message = {
     role: 'assistant',
     content:
-      `I've imported the contents of the "${folderName}" folder.${binaryFilesMessage}
+      i18n.t('systemMessages.importedFolderContents', { folderName, binaryFilesDetails }) +
+      `
       <boltArtifact id="imported-files" title="Imported Files" type="bundled" >
       ${fileArtifacts
         .map(
@@ -38,7 +40,7 @@ export const createChatFromFileArtifacts = async (
   const userMessage: Message = {
     role: 'user',
     id: generateId(),
-    content: `Import the "${folderName}" folder`,
+    content: i18n.t('systemMessages.importFolderUser', "Import the \"{{folderName}}\" folder", { folderName }),
     createdAt: new Date(),
   };
 
@@ -48,7 +50,7 @@ export const createChatFromFileArtifacts = async (
     messages.push({
       role: 'user',
       id: generateId(),
-      content: 'Setup the codebase and Start the application',
+      content: i18n.t('systemMessages.setupAndStartAppUser', 'Setup the codebase and Start the application'),
     });
     messages.push(commandsMessage);
   }
@@ -83,15 +85,16 @@ export const createChatFromFolder = async (
   const commands = await detectProjectCommands(fileArtifacts);
   const commandsMessage = createCommandsMessage(commands);
 
-  const binaryFilesMessage =
+  const binaryFilesDetails =
     binaryFiles.length > 0
-      ? `\n\nSkipped ${binaryFiles.length} binary files:\n${binaryFiles.map((f) => `- ${f}`).join('\n')}`
+      ? i18n.t('systemMessages.skippedBinaryFilesList', { count: binaryFiles.length, fileList: binaryFiles.map((f) => `- ${f}`).join('\n') })
       : '';
 
   const filesMessage: Message = {
     role: 'assistant',
     content:
-      `I've imported the contents of the "${folderName}" folder.${binaryFilesMessage}
+      i18n.t('systemMessages.importedFolderContents', { folderName, binaryFilesDetails }) +
+      `
       <boltArtifact id="imported-files" title="Imported Files" type="bundled" >
       ${fileArtifacts
         .map(
@@ -109,7 +112,7 @@ export const createChatFromFolder = async (
   const userMessage: Message = {
     role: 'user',
     id: generateId(),
-    content: `Import the "${folderName}" folder`,
+    content: i18n.t('systemMessages.importFolderUser', "Import the \"{{folderName}}\" folder", { folderName }),
     createdAt: new Date(),
   };
 
@@ -119,7 +122,7 @@ export const createChatFromFolder = async (
     messages.push({
       role: 'user',
       id: generateId(),
-      content: 'Setup the codebase and Start the application',
+      content: i18n.t('systemMessages.setupAndStartAppUser', 'Setup the codebase and Start the application'),
     });
     messages.push(commandsMessage);
   }

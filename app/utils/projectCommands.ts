@@ -1,5 +1,6 @@
 import type { Message } from 'ai';
 import { generateId } from './fileUtils';
+import i18n from '~/i18n';
 
 export interface ProjectCommands {
   type: string;
@@ -36,7 +37,9 @@ export async function detectProjectCommands(files: FileContent[]): Promise<Proje
           type: 'Node.js',
           setupCommand: `npm install`,
           startCommand: `npm run ${availableCommand}`,
-          followupMessage: `Found "${availableCommand}" script in package.json. Running "npm run ${availableCommand}" after installation.`,
+          followupMessage: i18n.t('systemMessages.foundScriptAndRunning',
+            'Found "{{scriptName}}" script in package.json. Running "npm run {{scriptName}}" after installation.',
+            { scriptName: availableCommand }),
         };
       }
 
@@ -44,7 +47,7 @@ export async function detectProjectCommands(files: FileContent[]): Promise<Proje
         type: 'Node.js',
         setupCommand: 'npm install',
         followupMessage:
-          'Would you like me to inspect package.json to determine the available scripts for running this project?',
+          i18n.t('systemMessages.packageJsonInspectPrompt', 'Would you like me to inspect package.json to determine the available scripts for running this project?'),
       };
     } catch (error) {
       console.error('Error parsing package.json:', error);
