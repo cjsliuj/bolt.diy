@@ -23,7 +23,6 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
     const filteredFiles = allFiles.filter((file) => {
       const path = file.webkitRelativePath.split('/').slice(1).join('/');
       const include = shouldIncludeFile(path);
-
       return include;
     });
 
@@ -31,7 +30,6 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
       const error = new Error('No valid files found');
       logStore.logError('File import failed - no valid files', error, { folderName: 'Unknown Folder' });
       toast.error('No files found in the selected folder');
-
       return;
     }
 
@@ -44,7 +42,6 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
       toast.error(
         `This folder contains ${filteredFiles.length.toLocaleString()} files. This product is not yet optimized for very large projects. Please select a folder with fewer than ${MAX_FILES.toLocaleString()} files.`,
       );
-
       return;
     }
 
@@ -70,7 +67,6 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
         const error = new Error('No text files found');
         logStore.logError('File import failed - no text files', error, { folderName });
         toast.error('No text files found in the selected folder');
-
         return;
       }
 
@@ -96,7 +92,6 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
       toast.success('Folder imported successfully');
     } catch (error) {
       logStore.logError('Failed to import folder', error, { folderName });
-      console.error('Failed to import folder:', error);
       toast.error('Failed to import folder');
     } finally {
       setIsLoading(false);
@@ -119,7 +114,9 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
       <Button
         onClick={() => {
           const input = document.getElementById('folder-import');
-          input?.click();
+          if (input) {
+            input.click();
+          }
         }}
         title={t('chat.importFolder')}
         variant="outline"

@@ -18,7 +18,6 @@ const lookupSavedPassword = (url: string) => {
     const { username, password } = JSON.parse(gitCreds || '{}');
     return { username, password };
   } catch (error) {
-    console.log(`Failed to parse Git Cookie ${error}`);
     return null;
   }
 };
@@ -78,17 +77,13 @@ export function useGit() {
           corsProxy: '/api/git-proxy',
           headers,
           onProgress: (event) => {
-            console.log('Git clone progress:', event);
           },
           onAuth: (url) => {
             let auth = lookupSavedPassword(url);
 
             if (auth) {
-              console.log('Using saved authentication for', url);
               return auth;
             }
-
-            console.log('Repository requires authentication:', url);
 
             if (confirm('This repo is password protected. Ready to enter a username & password?')) {
               auth = {
@@ -106,7 +101,6 @@ export function useGit() {
             throw `Error Authenticating with ${url.split('/')[2]}`;
           },
           onAuthSuccess: (url, auth) => {
-            console.log(`Authentication successful for ${url}`);
             saveGitAuth(url, auth);
           },
         });

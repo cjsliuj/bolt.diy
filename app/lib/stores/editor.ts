@@ -45,7 +45,6 @@ export const currentDocument = computed(
     }
     
     // 3. If attempts fail, return undefined.
-    // console.warn(\`currentDocument derived: Document not found for selectedFile "\\${selectedFileValue}" (tried as is and as relative if applicable).\\`);
     return undefined; 
   }
 );

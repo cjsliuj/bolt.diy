@@ -6,6 +6,7 @@ const LAST_ACKNOWLEDGED_VERSION_KEY = 'bolt_last_acknowledged_version';
 export const useUpdateCheck = () => {
   const [hasUpdate, setHasUpdate] = useState(false);
   const [currentVersion, setCurrentVersion] = useState<string>('');
+  const [updateCheckError, setUpdateCheckError] = useState<string | null>(null);
   const [lastAcknowledgedVersion, setLastAcknowledgedVersion] = useState<string | null>(() => {
     try {
       return localStorage.getItem(LAST_ACKNOWLEDGED_VERSION_KEY);
@@ -16,43 +17,53 @@ export const useUpdateCheck = () => {
 
   useEffect(() => {
     const checkUpdate = async () => {
+      setUpdateCheckError(null);
       try {
-        const { available, version } = await checkForUpdates();
-        setCurrentVersion(version);
-
-        // Only show update if it's a new version and hasn't been acknowledged
-        setHasUpdate(available && version !== lastAcknowledgedVersion);
+        const result = await checkForUpdates();
+        if (result.error) {
+          setUpdateCheckError(result.error.message);
+          setHasUpdate(false);
+          setCurrentVersion('unknown');
+        } else {
+          setCurrentVersion(result.version);
+          setHasUpdate(result.available && result.version !== lastAcknowledgedVersion);
+        }
       } catch (error) {
-        console.error('Failed to check for updates:', error);
+        setUpdateCheckError(error instanceof Error ? error.message : 'Unknown error');
+        setHasUpdate(false);
+        setCurrentVersion('unknown');
       }
     };
 
-    // Check immediately and then every 30 minutes
-    checkUpdate();
+    // checkUpdate(); // Temporarily disabled
+    // const interval = setInterval(checkUpdate, 30 * 60 * 1000); // Temporarily disabled
 
-    const interval = setInterval(checkUpdate, 30 * 60 * 1000);
-
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval); // Corresponding cleanup also disabled
+    return () => {}; // Return an empty function for cleanup as interval is disabled
   }, [lastAcknowledgedVersion]);
 
   const handleAcknowledgeUpdate = async () => {
     try {
-      const { version } = await checkForUpdates();
-      await acknowledgeUpdate(version);
+      const result = await checkForUpdates();
+      if (result.error) {
+        return;
+      }
+      
+      await acknowledgeUpdate(result.version);
 
-      // Store in localStorage
       try {
-        localStorage.setItem(LAST_ACKNOWLEDGED_VERSION_KEY, version);
+        localStorage.setItem(LAST_ACKNOWLEDGED_VERSION_KEY, result.version);
       } catch (error) {
-        console.error('Failed to persist acknowledged version:', error);
+        // ... existing code ...
       }
 
-      setLastAcknowledgedVersion(version);
+      setLastAcknowledgedVersion(result.version);
       setHasUpdate(false);
+      setUpdateCheckError(null);
     } catch (error) {
-      console.error('Failed to acknowledge update:', error);
+      // ... existing code ...
     }
   };
 
-  return { hasUpdate, currentVersion, acknowledgeUpdate: handleAcknowledgeUpdate };
+  return { hasUpdate, currentVersion, acknowledgeUpdate: handleAcknowledgeUpdate, updateCheckError };
 };

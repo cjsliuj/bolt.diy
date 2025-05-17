@@ -60,7 +60,6 @@ export function AutoImportChat({ asseturl }: AutoImportChatProps) {
 
   const importAsset = async ()=>{
     setLoading(true);
-    console.log("ljlog asseturl:",asseturl);
     if (!asseturl || asseturl.length <= 0) {
       setTip(t('common.error') + ": asset " + t('common.error'));
       setLoading(false);
@@ -130,8 +129,16 @@ export function Chat() {
 
   const { ready, initialMessages, storeMessageHistory, importChat, exportChat } = useChatHistory();
   const title = useStore(description);
+
   useEffect(() => {
-    workbenchStore.setReloadedMessages(initialMessages.map((m) => m.id));
+    if (ready) {
+    }
+  }, [ready, initialMessages]);
+
+  useEffect(() => {
+    if (Array.isArray(initialMessages)) {
+      workbenchStore.setReloadedMessages(initialMessages.map((m) => m.id));
+    }
   }, [initialMessages]);
 
   return (
@@ -214,7 +221,7 @@ export const ChatImpl = memo(
     const [fakeLoading, setFakeLoading] = useState(false);
     const files = useStore(workbenchStore.files);
     const actionAlert = useStore(workbenchStore.alert);
-    const supabaseConn = useStore(supabaseConnection); // Add this line to get Supabase connection
+    const supabaseConn = useStore(supabaseConnection);
     const selectedProject = supabaseConn.stats?.projects?.find(
       (project) => project.id === supabaseConn.selectedProjectId,
     );
@@ -282,7 +289,6 @@ export const ChatImpl = memo(
         setData(undefined);
 
         if (usage) {
-          console.log('Token usage:', usage);
           logStore.logProvider('Chat response completed', {
             component: 'Chat',
             action: 'response',
@@ -300,8 +306,6 @@ export const ChatImpl = memo(
     });
     useEffect(() => {
       const prompt = searchParams.get('prompt');
-
-      // console.log(prompt, searchParams, model, provider);
 
       if (prompt) {
         setSearchParams({});
@@ -328,6 +332,20 @@ export const ChatImpl = memo(
     }, []);
 
     useEffect(() => {
+      if (messages && messages.length > 0) {
+      } else if (initialMessages && initialMessages.length > 0 && messages.length === 0) {
+      }
+    }, [messages, isLoading, initialMessages]);
+
+    useEffect(() => {
+      if (chatStarted && messages.length > initialMessages.length) {
+        storeMessageHistory(messages).catch((error) => toast.error(error.message));
+      } else if (chatStarted) {
+      }
+    }, [messages, initialMessages, storeMessageHistory, chatStarted]);
+
+    // Debounced message parsing and storage
+    useEffect(() => {
       processSampledMessages({
         messages,
         initialMessages,
@@ -335,7 +353,14 @@ export const ChatImpl = memo(
         parseMessages,
         storeMessageHistory,
       });
-    }, [messages, isLoading, parseMessages]);
+    }, [messages, initialMessages, isLoading, parseMessages, storeMessageHistory]);
+
+    useEffect(() => {
+      setChatStarted(initialMessages.length > 0 || messages.length > 0);
+      if (initialMessages.length > 0 || messages.length > 0) {
+        chatStore.setKey('started', true);
+      }
+    }, [messages, initialMessages, chatStarted]);
 
     const scrollTextArea = () => {
       const textarea = textareaRef.current;

@@ -303,8 +303,11 @@ export class FilesStore {
     try {
       return utf8TextDecoder.decode(buffer);
     } catch (error) {
-      console.log(error);
-      return '';
+      // If decoding fails, it implies the content might be binary.
+      // The original console.log(error) was here.
+      // This method should not attempt to modify this.files directly.
+      // Returning an empty string or a specific marker for binary would be more appropriate.
+      return ''; // Indicates decoding failure / potentially binary
     }
   }
 

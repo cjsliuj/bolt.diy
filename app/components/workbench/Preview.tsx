@@ -302,8 +302,9 @@ export const Preview = memo((props: PreviewDialogProps) => {
 
 
   const handleIFrameMessage = (event:any) => {
+    console.log(`[${new Date().toISOString()}] Preview.handleIFrameMessage: Received message from iframe:`, event.data);
     const data = event.data as IFrameReplaceMessageData
-    const msgType = data.msgType
+    const msgType = data?.msgType
     if (msgType === "requestEditMode") {
       if (iframeRef.current) {
         iframeRef.current.contentWindow!.postMessage({ msgType: 'switchMode', dstModeType:isEditModeOnRef.current ? 2:0}, '*');

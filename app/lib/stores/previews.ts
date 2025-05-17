@@ -1,5 +1,6 @@
 import type { WebContainer } from '@webcontainer/api';
 import { atom } from 'nanostores';
+import { webcontainer as actualWebContainerPromise } from '~/lib/webcontainer'; // Import the actual promise
 
 // Extend Window interface to include our custom property
 declare global {
@@ -142,9 +143,12 @@ export class PreviewsStore {
   async #init() {
     const webcontainer = await this.#webcontainer;
 
+    webcontainer.on('error', (error) => {
+      console.error(`[${new Date().toISOString()}] PreviewsStore.webcontainer: Error event:`, error);
+    });
+
     // Listen for server ready events
     webcontainer.on('server-ready', (port, url) => {
-      console.log('[Preview] Server ready on port:', port, url);
       this.broadcastUpdate(url);
 
       // Initial storage sync when preview is ready
@@ -152,21 +156,53 @@ export class PreviewsStore {
     });
 
     try {
+      // Ensure /home/project exists before watching
+      const projectDir = '/home/project';
+      try {
+        await webcontainer.fs.readdir(projectDir); // Try to read the directory
+      } catch (e: any) {
+        if (e.code === 'ENOENT') {
+          try {
+            await webcontainer.fs.mkdir(projectDir, { recursive: true });
+          } catch (mkdirError) {
+            console.error(`[${new Date().toISOString()}] PreviewsStore.#init: Failed to create ${projectDir} directory:`, mkdirError);
+            // If we can't create it, re-throw or handle appropriately, as watch will likely fail
+            throw mkdirError; 
+          }
+        } else {
+          // Other error reading directory, re-throw
+          console.error(`[${new Date().toISOString()}] PreviewsStore.#init: Error checking ${projectDir} directory (not ENOENT):`, e);
+          throw e;
+        }
+      }
+
       // Watch for file changes
-      const watcher = await webcontainer.fs.watch('**/*', { persistent: true });
+      const fsWatcherInstance = webcontainer.fs.watch(
+        `${projectDir}/**/*`, // Watch inside the project directory
+        { persistent: true }, 
+        async (event: 'rename' | 'change', filename: string | Uint8Array | undefined) => {
+          let filenameStr: string | undefined = undefined;
+          if (typeof filename === 'string') {
+            filenameStr = filename;
+          } else if (filename instanceof Uint8Array) {
+            try {
+              filenameStr = new TextDecoder().decode(filename);
+            } catch (e) {
+              console.error(`[${new Date().toISOString()}] PreviewsStore.watcher: Failed to decode filename from Uint8Array:`, e);
+            }
+          }
 
-      // Use the native watch events
-      (watcher as any).addEventListener('change', async () => {
-        const previews = this.previews.get();
-
-        for (const preview of previews) {
-          const previewId = this.getPreviewId(preview.baseUrl);
-
-          if (previewId) {
-            this.broadcastFileChange(previewId);
+          if (filenameStr) {
+            const previews = this.previews.get();
+            for (const preview of previews) {
+              const previewId = this.getPreviewId(preview.baseUrl);
+              if (previewId) {
+                this.broadcastFileChange(previewId);
+              }
+            }
           }
         }
-      });
+      );
 
       // Watch for DOM changes that might affect storage
       if (typeof window !== 'undefined') {
@@ -302,7 +338,7 @@ export function usePreviewStore() {
      * Initialize with a Promise that resolves to WebContainer
      * This should match how you're initializing WebContainer elsewhere
      */
-    previewsStore = new PreviewsStore(Promise.resolve({} as WebContainer));
+    previewsStore = new PreviewsStore(actualWebContainerPromise); // Use the actual promise
   }
 
   return previewsStore;

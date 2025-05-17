@@ -16,9 +16,6 @@ const resources = {
   },
 };
 
-console.log('[i18n] Initializing i18next...');
-console.log('[i18n] Loaded resources:', resources);
-
 i18n
   // 检测用户语言
   .use(LanguageDetector)
@@ -30,7 +27,7 @@ i18n
     fallbackLng: 'zh', // 回退语言
     defaultNS: 'common', // 默认命名空间
     // lng: 'zh', // 移除显式设置 lng，让 LanguageDetector 决定初始语言
-    debug: true, // 开启 i18next 调试模式以获取更详细的日志
+    debug: false, // 开启 i18next 调试模式以获取更详细的日志
     interpolation: {
       escapeValue: false, // 不转义 React 中的值
     },
@@ -42,16 +39,10 @@ i18n
     },
   }, (err, t) => {
     if (err) return console.error('[i18n] Error initializing i18next:', err);
-    console.log('[i18n] i18next initialized successfully.');
-    // @ts-ignore
-    console.log('[i18n] Detected language:', i18n.language);
-    // @ts-ignore
-    console.log('[i18n] Example translation (common.save):', t('common.save'));
   });
 
 // 监听语言变化事件
 i18n.on('languageChanged', (lng) => {
-  console.log(`[i18n] Language changed to: ${lng}`);
 });
 
 export default i18n; 

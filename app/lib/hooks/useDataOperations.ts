@@ -200,11 +200,16 @@ export function useDataOperations({
       return;
     }
 
-    console.log('Export: Using database', {
-      name: db.name,
-      version: db.version,
-      objectStoreNames: Array.from(db.objectStoreNames),
-    });
+    const dbName = db.name;
+    if (!dbName) {
+      toast.error('No database name');
+      return;
+    }
+
+    if (!db.objectStoreNames.contains('chats')) {
+      toast.error('No chats store in database');
+      return;
+    }
 
     setIsExporting(true);
     setProgressPercent(0);
@@ -214,67 +219,48 @@ export function useDataOperations({
       // Step 1: Export chats
       showProgress('Retrieving chats from database', 25);
 
-      console.log('Database details:', {
-        name: db.name,
-        version: db.version,
-        objectStoreNames: Array.from(db.objectStoreNames),
-      });
+      const transaction = db.transaction('chats', 'readonly');
+      const store = transaction.objectStore('chats');
+      const request = store.getAll();
 
-      // Direct database query approach for more reliable access
-      const directChats = await new Promise<any[]>((resolve, reject) => {
-        try {
-          console.log(`Creating transaction on '${db.name}' database, objectStore 'chats'`);
-
-          const transaction = db.transaction(['chats'], 'readonly');
-          const store = transaction.objectStore('chats');
-          const request = store.getAll();
-
-          request.onsuccess = () => {
-            console.log(`Found ${request.result ? request.result.length : 0} chats directly from database`);
-            resolve(request.result || []);
-          };
-
-          request.onerror = () => {
-            console.error('Error querying chats store:', request.error);
-            reject(request.error);
-          };
-        } catch (err) {
-          console.error('Error creating transaction:', err);
-          reject(err);
-        }
-      });
-
-      // Export data with direct chats
-      const exportData = {
-        chats: directChats,
-        exportDate: new Date().toISOString(),
+      request.onerror = (event) => {
+        console.error('Error fetching all chats for export:', event);
+        toast.error('Error fetching chats for export');
       };
 
-      // Step 2: Create blob
-      showProgress('Creating file', 50);
+      request.onsuccess = async () => {
+        const allChats: ChatDBEntry[] = request.result;
+        const exportData = {
+          chats: allChats,
+          exportDate: new Date().toISOString(),
+        };
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json',
-      });
+        // Step 2: Create blob
+        showProgress('Creating file', 50);
 
-      // Step 3: Download file
-      showProgress('Downloading file', 75);
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+          type: 'application/json',
+        });
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'bolt-chats.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+        // Step 3: Download file
+        showProgress('Downloading file', 75);
 
-      // Step 4: Complete
-      showProgress('Completing export', 100);
-      toast.success(`${exportData.chats.length} chats exported successfully`, { toastId: 'operation-progress' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'bolt-chats.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-      // Save operation for potential undo
-      setLastOperation({ type: 'export-all-chats', data: exportData });
+        // Step 4: Complete
+        showProgress('Completing export', 100);
+        toast.success(`${exportData.chats.length} chats exported successfully`, { toastId: 'operation-progress' });
+
+        // Save operation for potential undo
+        setLastOperation({ type: 'export-all-chats', data: exportData });
+      };
     } catch (error) {
       console.error('Error exporting chats:', error);
       toast.error(`Failed to export chats: ${error instanceof Error ? error.message : 'Unknown error'}`, {
@@ -311,13 +297,6 @@ export function useDataOperations({
         // Step 1: Directly query each selected chat from database
         showProgress('Retrieving selected chats from database', 20);
 
-        console.log('Database details for selected chats:', {
-          name: db.name,
-          version: db.version,
-          objectStoreNames: Array.from(db.objectStoreNames),
-        });
-
-        // Query each chat directly from the database
         const selectedChats = await Promise.all(
           chatIds.map(async (chatId) => {
             return new Promise<any>((resolve, reject) => {
@@ -328,15 +307,10 @@ export function useDataOperations({
 
                 request.onsuccess = () => {
                   if (request.result) {
-                    console.log(`Found chat with ID ${chatId}:`, {
-                      id: request.result.id,
-                      messageCount: request.result.messages?.length || 0,
-                    });
+                    resolve(request.result);
                   } else {
-                    console.log(`Chat with ID ${chatId} not found`);
+                    resolve(null);
                   }
-
-                  resolve(request.result || null);
                 };
 
                 request.onerror = () => {
@@ -353,8 +327,6 @@ export function useDataOperations({
 
         // Filter out any null results (chats that weren't found)
         const filteredChats = selectedChats.filter((chat) => chat !== null);
-
-        console.log(`Found ${filteredChats.length} selected chats out of ${chatIds.length} requested`);
 
         // Step 2: Prepare export data
         showProgress('Preparing export data', 40);

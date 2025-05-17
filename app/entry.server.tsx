@@ -22,13 +22,6 @@ export default async function handleRequest(
     ...appLoadContext, // This ensures serverEnv from getLoadContext is part of the context for RemixServer and subsequently for actions/loaders
   };
   
-  // Remove or comment out debug logs
-  // if (appLoadContext && (appLoadContext as any).serverEnv) {
-  //   console.log("[Entry Server] serverEnv found in appLoadContext. DEEPSEEK_API_KEY:", (appLoadContext as any).serverEnv.DEEPSEEK_API_KEY ? "Loaded" : "Not Loaded");
-  // } else {
-  //   console.log("[Entry Server] serverEnv NOT found in appLoadContext or appLoadContext is undefined.");
-  // }
-
   const readable = await renderToReadableStream(<RemixServer context={combinedContext} url={request.url} />, {
     signal: request.signal,
     onError(error: unknown) {

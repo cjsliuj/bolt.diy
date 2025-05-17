@@ -235,14 +235,11 @@ const getInitialTabConfiguration = (): TabWindowConfig => {
   }
 };
 
-// console.log('Initial tab configuration:', getInitialTabConfiguration());
-
 export const tabConfigurationStore = map<TabWindowConfig>(getInitialTabConfiguration());
 
 // Helper function to update tab configuration
 export const updateTabConfiguration = (config: TabVisibilityConfig) => {
   const currentConfig = tabConfigurationStore.get();
-  console.log('Current tab configuration before update:', currentConfig);
 
   const isUserTab = config.window === 'user';
   const targetArray = isUserTab ? 'userTabs' : 'developerTabs';
@@ -260,8 +257,6 @@ export const updateTabConfiguration = (config: TabVisibilityConfig) => {
     ...currentConfig,
     [targetArray]: updatedTabs,
   };
-
-  console.log('New tab configuration after update:', newConfig);
 
   tabConfigurationStore.set(newConfig);
   Cookies.set('tabConfiguration', JSON.stringify(newConfig), {

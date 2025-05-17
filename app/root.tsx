@@ -79,8 +79,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // 在 Layout 加载时添加日志，检查 i18n 状态
   useEffect(() => {
-    console.log(`[Layout] Mounted. Current i18n language: ${i18n.language}`);
-    console.log(`[Layout] Is i18n initialized? ${i18n.isInitialized}`);
+    // ... existing code ...
   }, []);
 
   return (
@@ -108,9 +107,7 @@ export default function App() {
     // 确保 i18n 实例已加载后再记录翻译和语言
     if (i18nInstance.isInitialized) {
         const currentLang = i18nInstance.language;
-        const translatedText = t('common.save');
-        console.log(`[App] useEffect: Detected language: ${currentLang}`);
-        console.log(`[App] useEffect: Translation for 'common.save': ${translatedText}`);
+        // ... existing code ...
 
         logStore.logSystem(t('common.loading'), {
           theme,
@@ -120,13 +117,11 @@ export default function App() {
           language: currentLang, // 添加当前语言到日志
         });
     } else {
-        console.log('[App] useEffect: i18n not initialized yet.');
+        // ... existing code ...
         // 可以考虑监听 initialized 事件
         const handleInitialized = () => {
             const currentLang = i18nInstance.language;
-            const translatedText = t('common.save');
-            console.log(`[App] useEffect (initialized event): Detected language: ${currentLang}`);
-            console.log(`[App] useEffect (initialized event): Translation for 'common.save': ${translatedText}`);
+            // ... existing code ...
             logStore.logSystem(t('common.loading'), {
               theme,
               platform: navigator.platform,

@@ -9,10 +9,8 @@ export const createChatFromFileArtifacts = async (
   binaryFiles: string[],
   folderName: string,
 ): Promise<Message[]> => {
-
   const commands = await detectProjectCommands(fileArtifacts);
   const commandsMessage = createCommandsMessage(commands);
-
   const binaryFilesDetails =
     binaryFiles.length > 0
       ? i18n.t('systemMessages.skippedBinaryFilesList', { count: binaryFiles.length, fileList: binaryFiles.map((f) => `- ${f}`).join('\n') })
@@ -81,10 +79,8 @@ export const createChatFromFolder = async (
       });
     }),
   );
-
   const commands = await detectProjectCommands(fileArtifacts);
   const commandsMessage = createCommandsMessage(commands);
-
   const binaryFilesDetails =
     binaryFiles.length > 0
       ? i18n.t('systemMessages.skippedBinaryFilesList', { count: binaryFiles.length, fileList: binaryFiles.map((f) => `- ${f}`).join('\n') })
@@ -102,8 +98,8 @@ export const createChatFromFolder = async (
             `<boltAction type="file" filePath="${file.path}">
             ${escapeBoltTags(file.content)}
             </boltAction>`,
-              )
-              .join('\n\n')}
+        )
+        .join('\n\n')}
       </boltArtifact>`,
     id: generateId(),
     createdAt: new Date(),

@@ -31,5 +31,4 @@ export const getFeatureFlags = async (): Promise<Feature[]> => {
 
 export const markFeatureViewed = async (featureId: string): Promise<void> => {
   /* TODO: Implement actual feature viewed logic */
-  console.log(`Marking feature ${featureId} as viewed`);
 };

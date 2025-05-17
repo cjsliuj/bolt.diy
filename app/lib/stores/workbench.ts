@@ -2,7 +2,7 @@ import { atom, map, type MapStore, type ReadableAtom, type WritableAtom } from '
 import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
 import { ActionRunner } from '~/lib/runtime/action-runner';
 import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/message-parser';
-import { webcontainer } from '~/lib/webcontainer';
+import { webcontainer as actualWebContainerPromise } from '~/lib/webcontainer';
 import type { ITerminal } from '~/types/terminal';
 import { unreachable } from '~/utils/unreachable';
 import { EditorStore, currentDocument as editorCurrentDocumentAtom } from './editor';
@@ -36,10 +36,10 @@ type Artifacts = MapStore<Record<string, ArtifactState>>;
 export type WorkbenchViewType = 'code' | 'diff' | 'preview';
 
 export class WorkbenchStore {
-  #previewsStore = new PreviewsStore(webcontainer);
-  #filesStore = new FilesStore(webcontainer);
-  #editorStore = new EditorStore(this.#filesStore);
-  #terminalStore = new TerminalStore(webcontainer);
+  #previewsStore = new PreviewsStore(actualWebContainerPromise);
+  #filesStore = new FilesStore(actualWebContainerPromise);
+  #editorStore: EditorStore;
+  #terminalStore = new TerminalStore(actualWebContainerPromise);
 
   #reloadedMessages = new Set<string>();
 
@@ -56,6 +56,8 @@ export class WorkbenchStore {
   artifactIdList: string[] = [];
   #globalExecutionQueue = Promise.resolve();
   constructor() {
+    this.#editorStore = new EditorStore(this.#filesStore);
+
     if (import.meta.hot) {
       import.meta.hot.data.artifacts = this.artifacts;
       import.meta.hot.data.unsavedFiles = this.unsavedFiles;
@@ -445,7 +447,7 @@ export class WorkbenchStore {
       closed: false,
       type,
       runner: new ActionRunner(
-        webcontainer,
+        actualWebContainerPromise,
         () => this.boltTerminal,
         (alert) => {
           if (this.#reloadedMessages.has(messageId)) {
@@ -514,7 +516,7 @@ export class WorkbenchStore {
     }
 
     if (data.action.type === 'file') {
-      const wc = await webcontainer;
+      const wc = await actualWebContainerPromise;
       const fullPath = path.join(wc.workdir, data.action.filePath);
 
       if (this.selectedFile.value !== fullPath) {
@@ -650,10 +652,8 @@ export class WorkbenchStore {
             auto_init: true,
           });
           repo = newRepo;
-        } else {
-          console.log('cannot create repo!');
-          throw error; // Some other error occurred
         }
+        throw error; // Some other error occurred
       }
 
       // Get all files
